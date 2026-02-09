@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banco de Talentos - PSR</title>
+    <title>Banco de Talentos Inteligente - PSR</title>
     <meta name="robots" content="noindex, nofollow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👔</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -41,19 +41,24 @@
         .logo h1 { margin: 0; font-size: 1.2rem; }
         .logo span { font-size: 0.8rem; opacity: 0.8; }
         
-        .main-container { max-width: 1400px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+        .main-container { max-width: 1400px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
 
         /* --- SIDEBAR FILTROS --- */
         .sidebar { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); height: fit-content; position: sticky; top: 20px; }
-        .sidebar h3 { margin-top: 0; color: var(--psr-blue); font-size: 1rem; border-bottom: 2px solid var(--bg-gray); padding-bottom: 10px; }
+        .sidebar h3 { margin-top: 0; color: var(--psr-blue); font-size: 1rem; border-bottom: 2px solid var(--bg-gray); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
         
         .filter-group { margin-bottom: 15px; }
         .filter-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #666; margin-bottom: 5px; }
-        .filter-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 0.9rem; }
-        .filter-input:focus { border-color: var(--psr-blue); }
+        .filter-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 0.9rem; transition: 0.3s; }
+        .filter-input:focus { border-color: var(--psr-blue); box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1); }
         
-        .btn-filter { width: 100%; padding: 10px; background: var(--psr-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+        .geo-group { background: #e3f2fd; padding: 10px; border-radius: 8px; border: 1px solid #bbdefb; }
+        .geo-group label { color: #0d47a1; }
+
+        .btn-filter { width: 100%; padding: 10px; background: var(--psr-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 10px; transition: 0.2s; }
+        .btn-filter:hover { background: #002244; }
         .btn-clear { background: #e0e0e0; color: #333; margin-top: 10px; }
+        .btn-clear:hover { background: #d0d0d0; }
 
         /* --- MAIN CONTENT --- */
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 15px; border-radius: 10px; }
@@ -66,7 +71,7 @@
         /* --- TABLE --- */
         .table-container { background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; min-height: 400px; }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: #f8f9fa; text-align: left; padding: 15px; font-size: 0.8rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #eee; position: sticky; top: 0; }
+        th { background: #f8f9fa; text-align: left; padding: 15px; font-size: 0.8rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #eee; position: sticky; top: 0; z-index: 10; }
         td { padding: 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: middle; }
         tr:hover { background: #f0f7ff; }
 
@@ -74,6 +79,7 @@
         .badge-area { background: #e3f2fd; color: #0d47a1; }
         .badge-prod { background: #e8f5e9; color: #1b5e20; }
         .badge-adm { background: #fff3e0; color: #e65100; }
+        .dist-badge { background: #f3e5f5; color: #7b1fa2; font-size: 0.7rem; margin-left: 5px; padding: 2px 5px; border-radius: 3px; }
 
         .actions-cell { display: flex; gap: 10px; }
         .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #999; transition: 0.2s; }
@@ -90,7 +96,6 @@
         .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 5px; color: #555; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; }
         
-        /* Mobile */
         @media (max-width: 768px) {
             .main-container { grid-template-columns: 1fr; }
             .sidebar { position: static; margin-bottom: 20px; }
@@ -130,6 +135,26 @@
         let allCandidates = [];
         let currentEditId = null;
 
+        // --- MAPA DE COORDENADAS (ATLAS LOCAL) ---
+        // Adicionei coordenadas fixas para tornar a busca INSTANTÂNEA na região
+        const CITY_COORDS = {
+            "paracambi": {lat: -22.6111, lon: -43.7125},
+            "japeri": {lat: -22.6436, lon: -43.6542},
+            "mendes": {lat: -22.5261, lon: -43.7328},
+            "engenheiro paulo de frontin": {lat: -22.5511, lon: -43.6789},
+            "seropedica": {lat: -22.7444, lon: -43.7086},
+            "piraí": {lat: -22.6288, lon: -43.8983},
+            "barra do piraí": {lat: -22.4697, lon: -43.8247},
+            "vassouras": {lat: -22.4045, lon: -43.6631},
+            "miguel pereira": {lat: -22.4578, lon: -43.4800},
+            "paty do alferes": {lat: -22.4300, lon: -43.4242},
+            "nova iguaçu": {lat: -22.7561, lon: -43.4607},
+            "queimados": {lat: -22.7153, lon: -43.5558},
+            "rio de janeiro": {lat: -22.9068, lon: -43.1729},
+            "volta redonda": {lat: -22.5231, lon: -44.1042},
+            "itaguaí": {lat: -22.8696, lon: -43.7758}
+        };
+
         // --- AUTH ---
         onAuthStateChanged(auth, (user) => {
             document.getElementById('loading-screen').style.display = 'none';
@@ -151,13 +176,11 @@
         window.logout = () => signOut(auth).then(() => location.reload());
 
         // --- CRUD CANDIDATOS ---
-
         async function carregarCandidatos() {
             const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Atualizando lista do Firebase...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Sincronizando Banco de Talentos...</td></tr>';
             
             try {
-                // Busca direta no nó 'candidatos'
                 const snapshot = await get(child(ref(db), 'candidatos'));
                 allCandidates = [];
                 if (snapshot.exists()) {
@@ -168,14 +191,15 @@
                         });
                     });
                 }
-                aplicarFiltros(); // Renderiza a tabela
+                aplicarFiltros();
             } catch (error) {
                 console.error(error);
-                alert("Erro ao carregar candidatos: " + error.message);
+                alert("Erro ao carregar: " + error.message);
             }
         }
 
         window.salvarCandidato = async () => {
+            // (Mesma lógica de antes, mantida)
             const data = {
                 nome: document.getElementById('c_nome').value,
                 email: document.getElementById('c_email').value,
@@ -191,7 +215,6 @@
                 bairro: document.getElementById('c_bairro').value,
                 cidade: document.getElementById('c_cidade').value,
                 link_curriculo: document.getElementById('c_link').value,
-                // Se for edição, mantém a data original, senão cria nova
                 data_cadastro: currentEditId ? (allCandidates.find(c => c.id === currentEditId).data_cadastro) : new Date().toISOString()
             };
 
@@ -200,10 +223,10 @@
             try {
                 if (currentEditId) {
                     await update(ref(db, `candidatos/${currentEditId}`), data);
-                    alert("Candidato atualizado com sucesso!");
+                    alert("Atualizado com sucesso!");
                 } else {
                     await push(ref(db, 'candidatos'), data);
-                    alert("Candidato adicionado ao Banco de Talentos!");
+                    alert("Cadastrado com sucesso!");
                 }
                 closeModal();
                 carregarCandidatos();
@@ -213,7 +236,7 @@
         };
 
         window.deletarCandidato = async (id) => {
-            if (confirm("ATENÇÃO: Isso excluirá permanentemente este candidato do banco de dados.\n\nDeseja continuar?")) {
+            if (confirm("Excluir permanentemente?")) {
                 await remove(ref(db, `candidatos/${id}`));
                 carregarCandidatos();
             }
@@ -222,48 +245,124 @@
         window.editarCandidato = (id) => {
             const c = allCandidates.find(x => x.id === id);
             if (!c) return;
-            
             currentEditId = id;
             document.getElementById('modalTitle').innerText = "Editar Candidato";
-            
-            // Preencher campos
             const fields = ['nome', 'email', 'nascimento', 'cpf', 'telefone', 'whatsapp', 'sexo', 'civil', 'area', 'cep', 'endereco', 'bairro', 'cidade', 'link'];
             fields.forEach(f => {
                 const key = f === 'civil' ? 'estado_civil' : (f === 'link' ? 'link_curriculo' : f);
                 document.getElementById(`c_${f}`).value = c[key] || '';
             });
-            
             openModal();
         };
 
-        // --- FILTROS & RENDERIZAÇÃO ---
+        // --- FILTROS INTELIGENTES ---
 
-        window.aplicarFiltros = () => {
-            const fNome = document.getElementById('f_nome').value.toLowerCase();
-            const fArea = document.getElementById('f_area').value;
-            const fCidade = document.getElementById('f_cidade').value.toLowerCase();
-            const fIdadeMin = parseInt(document.getElementById('f_idade_min').value) || 0;
-            const fIdadeMax = parseInt(document.getElementById('f_idade_max').value) || 100;
-
-            const filtered = allCandidates.filter(c => {
-                // Cálculo Idade
-                let age = 0;
-                if(c.nascimento) {
-                    const birth = new Date(c.nascimento);
-                    if(!isNaN(birth)) {
-                        age = new Date().getFullYear() - birth.getFullYear();
+        // 1. Função Levenshtein (Para tolerar erros de digitação)
+        function levenshtein(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
                     }
                 }
+            }
+            return matrix[b.length][a.length];
+        }
 
-                const matchNome = (c.nome || '').toLowerCase().includes(fNome);
-                const matchArea = fArea === "" || c.area === fArea;
-                const matchCidade = c.cidade ? c.cidade.toLowerCase().includes(fCidade) : true;
-                const matchIdade = age >= fIdadeMin && age <= fIdadeMax;
+        // Verifica se texto A parece com texto B (Fuzzy Match)
+        function isFuzzyMatch(textoInput, textoBanco) {
+            if (!textoInput) return true;
+            if (!textoBanco) return false;
+            
+            const a = textoInput.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const b = textoBanco.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-                return matchNome && matchArea && matchCidade && matchIdade;
-            });
+            if (b.includes(a)) return true; // Match exato parcial
 
-            renderTable(filtered);
+            // Tolerância: Permite 1 erro a cada 4 caracteres (ex: 2 erros numa palavra de 8 letras)
+            const maxErrors = Math.floor(a.length / 4) + 1; 
+            const dist = levenshtein(a, b);
+            return dist <= maxErrors; 
+        }
+
+        // 2. Cálculo de Distância (Haversine)
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371; // Raio da Terra em km
+            var dLat = deg2rad(lat2 - lat1);
+            var dLon = deg2rad(lon2 - lon1);
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            var d = R * c; 
+            return d;
+        }
+
+        function deg2rad(deg) { return deg * (Math.PI / 180); }
+
+        window.aplicarFiltros = () => {
+            const btnFilter = document.querySelector('.btn-filter');
+            btnFilter.innerText = "Processando...";
+            
+            setTimeout(() => { // Timeout para não travar a UI enquanto calcula
+                const fNome = document.getElementById('f_nome').value;
+                const fArea = document.getElementById('f_area').value;
+                const fCidade = document.getElementById('f_cidade').value;
+                const fBairro = document.getElementById('f_bairro').value; // Novo filtro Bairro
+                
+                // Filtros Geo
+                const fGeoRef = document.getElementById('f_geo_ref').value.toLowerCase().trim();
+                const fGeoRaio = parseFloat(document.getElementById('f_geo_km').value) || 0;
+
+                let coordsRef = null;
+                if (fGeoRef && CITY_COORDS[fGeoRef]) {
+                    coordsRef = CITY_COORDS[fGeoRef];
+                }
+
+                const filtered = allCandidates.filter(c => {
+                    // Match Inteligente (Fuzzy)
+                    const matchNome = isFuzzyMatch(fNome, c.nome);
+                    const matchArea = fArea === "" || c.area === fArea;
+                    const matchCidade = isFuzzyMatch(fCidade, c.cidade);
+                    const matchBairro = isFuzzyMatch(fBairro, c.bairro);
+
+                    // Match Geográfico
+                    let matchGeo = true;
+                    let distText = "";
+                    
+                    if (fGeoRaio > 0 && fGeoRef) {
+                        const candCityNorm = (c.cidade || "").toLowerCase().trim();
+                        // Se temos coordenadas da cidade do candidato
+                        if (candCityNorm && CITY_COORDS[candCityNorm] && coordsRef) {
+                            const coordsCand = CITY_COORDS[candCityNorm];
+                            const dist = getDistanceFromLatLonInKm(coordsRef.lat, coordsRef.lon, coordsCand.lat, coordsCand.lon);
+                            
+                            c.distanciaCalculada = dist.toFixed(1); // Salva para exibir na tabela
+                            if (dist > fGeoRaio) matchGeo = false;
+                        } else if (fGeoRef !== candCityNorm) {
+                            // Se não conhecemos a cidade e ela não é a cidade referência, 
+                            // por segurança, ocultamos (ou mostramos se quiser ser permissivo)
+                            // Aqui vamos ocultar para ser preciso
+                            matchGeo = false;
+                            
+                            // Exceção: Se for a MESMA cidade digitada (ex: Paracambi = Paracambi), a distância é 0
+                            if (isFuzzyMatch(fGeoRef, candCityNorm)) matchGeo = true;
+                        }
+                    } else {
+                        c.distanciaCalculada = null;
+                    }
+
+                    return matchNome && matchArea && matchCidade && matchBairro && matchGeo;
+                });
+
+                renderTable(filtered);
+                btnFilter.innerText = "Aplicar Filtros";
+            }, 50);
         };
 
         function renderTable(list) {
@@ -272,32 +371,34 @@
             tbody.innerHTML = "";
 
             if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Nenhum candidato encontrado com estes filtros.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Nenhum candidato encontrado.</td></tr>';
                 return;
             }
 
             list.forEach(c => {
-                // Formatação de Idade
                 let idade = 'N/D';
                 if(c.nascimento) {
                     const birth = new Date(c.nascimento);
                     if(!isNaN(birth)) idade = (new Date().getFullYear() - birth.getFullYear()) + ' anos';
                 }
                 
-                // Badge de Área
                 let badgeClass = 'badge-area';
                 if (c.area === 'Produção') badgeClass = 'badge-prod';
-                if (c.area === 'Administrativo' || c.area === 'Financeiro' || c.area === 'RH') badgeClass = 'badge-adm';
+                if (['Administrativo','Financeiro','RH'].includes(c.area)) badgeClass = 'badge-adm';
 
-                // Link OneDrive
-                let btnLink = `<span style="color:#eee; cursor:default" title="Sem currículo"><i class="fas fa-link"></i></span>`;
+                let btnLink = `<span style="color:#eee; cursor:default"><i class="fas fa-link"></i></span>`;
                 if (c.link_curriculo && c.link_curriculo.length > 5) {
-                    btnLink = `<a href="${c.link_curriculo}" target="_blank" class="btn-icon" style="color:#0078d4" title="Abrir Currículo (OneDrive/Drive)"><i class="fas fa-cloud"></i></a>`;
+                    btnLink = `<a href="${c.link_curriculo}" target="_blank" class="btn-icon" style="color:#0078d4" title="Abrir Currículo"><i class="fas fa-cloud"></i></a>`;
                 }
 
-                // WhatsApp (Remove caracteres não numéricos)
                 const wpp = c.whatsapp ? c.whatsapp.replace(/\D/g, '') : '';
-                const btnWpp = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" class="btn-icon" style="color:#25d366" title="Chamar no WhatsApp"><i class="fab fa-whatsapp"></i></a>` : `<span class="btn-icon" style="color:#eee; cursor:default"><i class="fab fa-whatsapp"></i></span>`;
+                const btnWpp = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" class="btn-icon" style="color:#25d366"><i class="fab fa-whatsapp"></i></a>` : `<span class="btn-icon" style="color:#eee"><i class="fab fa-whatsapp"></i></span>`;
+
+                // Exibição da Distância (se houver filtro Geo ativo)
+                let localHtml = `${c.cidade || '-'} / ${c.bairro || '-'}`;
+                if (c.distanciaCalculada) {
+                    localHtml += `<span class="dist-badge"><i class="fas fa-map-marker-alt"></i> ${c.distanciaCalculada}km</span>`;
+                }
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -307,7 +408,7 @@
                     </td>
                     <td><span class="badge ${badgeClass}">${c.area}</span></td>
                     <td>${idade}</td>
-                    <td>${c.cidade || '-'} / ${c.bairro || '-'}</td>
+                    <td>${localHtml}</td>
                     <td>${c.telefone || '-'}</td>
                     <td class="actions-cell">
                         ${btnWpp}
@@ -321,9 +422,7 @@
         }
 
         // --- UI ---
-        window.openModal = () => {
-            document.getElementById('modalCandidato').style.display = 'flex';
-        }
+        window.openModal = () => document.getElementById('modalCandidato').style.display = 'flex';
         window.closeModal = () => {
             document.getElementById('modalCandidato').style.display = 'none';
             currentEditId = null;
@@ -331,11 +430,7 @@
             document.getElementById('modalTitle').innerText = "Novo Candidato";
         }
         window.limparFiltros = () => {
-            document.getElementById('f_nome').value = '';
-            document.getElementById('f_area').value = '';
-            document.getElementById('f_cidade').value = '';
-            document.getElementById('f_idade_min').value = '';
-            document.getElementById('f_idade_max').value = '';
+            document.querySelectorAll('.filter-input').forEach(el => el.value = '');
             aplicarFiltros();
         }
 
@@ -345,13 +440,13 @@
 
     <div id="loading-screen" class="full-screen">
         <i class="fas fa-spinner fa-spin fa-3x" style="color:var(--psr-blue)"></i>
-        <p style="margin-top:15px">Acessando Banco de Talentos...</p>
+        <p style="margin-top:15px">Carregando Inteligência...</p>
     </div>
 
     <div id="login-screen" class="full-screen">
         <div class="auth-card">
             <h2>PSR Talentos</h2>
-            <p>Acesso Restrito ao RH</p>
+            <p>Acesso Restrito Inteligente</p>
             <button onclick="login()" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Entrar com Google
             </button>
@@ -369,7 +464,7 @@
     <div id="app-screen">
         <header>
             <div class="logo">
-                <h1>Gestão de Candidatos</h1>
+                <h1>Banco de Talentos <i class="fas fa-brain" style="color:var(--psr-accent); font-size:0.9rem"></i></h1>
                 <span>PSR Impressão</span>
             </div>
             <div style="display:flex; align-items:center; gap:15px">
@@ -380,15 +475,15 @@
 
         <div class="main-container">
             <aside class="sidebar">
-                <h3><i class="fas fa-filter"></i> Filtragem</h3>
+                <h3><i class="fas fa-filter"></i> Filtros Inteligentes</h3>
                 
                 <div class="filter-group">
-                    <label>Nome do Candidato</label>
-                    <input type="text" id="f_nome" class="filter-input" placeholder="Buscar por nome...">
+                    <label>Nome (Aceita erros)</label>
+                    <input type="text" id="f_nome" class="filter-input" placeholder="Ex: Joa da Silva">
                 </div>
 
                 <div class="filter-group">
-                    <label>Área Pretendida</label>
+                    <label>Área</label>
                     <select id="f_area" class="filter-input">
                         <option value="">Todas</option>
                         <option value="Produção">Produção</option>
@@ -400,17 +495,23 @@
                     </select>
                 </div>
 
-                <div class="filter-group">
-                    <label>Cidade</label>
-                    <input type="text" id="f_cidade" class="filter-input" placeholder="Ex: Paracambi">
+                <div class="filter-group geo-group">
+                    <label><i class="fas fa-map-marked-alt"></i> Busca nas Proximidades</label>
+                    <input type="text" id="f_geo_ref" class="filter-input" placeholder="Referência (Ex: Paracambi)" style="margin-bottom:5px">
+                    <div style="display:flex; align-items:center; gap:5px">
+                        <input type="number" id="f_geo_km" class="filter-input" placeholder="Raio (km)">
+                        <span style="font-size:0.8rem; color:#666">km</span>
+                    </div>
                 </div>
 
                 <div class="filter-group">
-                    <label>Idade (Min - Max)</label>
-                    <div style="display:flex; gap:5px">
-                        <input type="number" id="f_idade_min" class="filter-input" placeholder="18">
-                        <input type="number" id="f_idade_max" class="filter-input" placeholder="60">
-                    </div>
+                    <label>Cidade (Texto Livre)</label>
+                    <input type="text" id="f_cidade" class="filter-input" placeholder="Ex: Nova Iguacu">
+                </div>
+
+                <div class="filter-group">
+                    <label>Bairro</label>
+                    <input type="text" id="f_bairro" class="filter-input" placeholder="Ex: Centro">
                 </div>
 
                 <button class="btn-filter" onclick="aplicarFiltros()">Aplicar Filtros</button>
@@ -420,11 +521,9 @@
             <main>
                 <div class="top-bar">
                     <div class="stats">
-                        Total de Candidatos: <strong id="total-count">0</strong>
+                        Candidatos Visíveis: <strong id="total-count">0</strong>
                     </div>
-                    <div style="display:flex; gap:10px">
-                        <button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Novo Candidato</button>
-                    </div>
+                    <button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Novo Candidato</button>
                 </div>
 
                 <div class="table-container">
@@ -434,7 +533,7 @@
                                 <th>Candidato</th>
                                 <th>Área</th>
                                 <th>Idade</th>
-                                <th>Local</th>
+                                <th>Localização</th>
                                 <th>Telefone</th>
                                 <th>Ações</th>
                             </tr>
@@ -480,7 +579,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>WhatsApp (Apenas números)</label>
+                        <label>WhatsApp</label>
                         <input type="text" id="c_whatsapp">
                     </div>
                     <div class="form-group">
@@ -511,9 +610,8 @@
                     </div>
 
                     <div class="form-group full-width">
-                        <label>Link do Currículo (OneDrive/Drive)</label>
+                        <label>Link do Currículo</label>
                         <input type="url" id="c_link" placeholder="https://onedrive.live.com/...">
-                        <small style="color:#888; font-size:0.7rem">Copie o link do arquivo no OneDrive e cole aqui.</small>
                     </div>
 
                     <div class="form-group">
@@ -536,7 +634,7 @@
 
                 <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end">
                     <button type="button" onclick="closeModal()" style="padding:10px 20px; border:none; background:#eee; cursor:pointer; border-radius:6px">Cancelar</button>
-                    <button type="submit" style="padding:10px 20px; border:none; background:var(--psr-blue); color:white; cursor:pointer; border-radius:6px">Salvar Candidato</button>
+                    <button type="submit" style="padding:10px 20px; border:none; background:var(--psr-blue); color:white; cursor:pointer; border-radius:6px">Salvar</button>
                 </div>
             </form>
         </div>
