@@ -151,6 +151,14 @@
             'milenessfranca@gmail.com'
         ];
 
+        // Mapeamento de nomes amigáveis para os cards
+        const NOMES_AMIGAVEIS = {
+            'marketingpsrimpressao@gmail.com': 'Marketing',
+            'rohsantos1@gmail.com': 'Rogéria',
+            'thaisportoaraujo6@gmail.com': 'Thais',
+            'milenessfranca@gmail.com': 'Milene'
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
@@ -205,8 +213,7 @@
                             const el = document.getElementById(id);
                             if(el) {
                                 el.value = valor;
-                                // SALVA O VALOR ORIGINAL PARA COMPARAÇÃO
-                                el.dataset.original = valor;
+                                el.dataset.original = valor; // Importante para o salvamento inteligente
 
                                 let metaEl;
                                 if(id.startsWith('card')) {
@@ -220,8 +227,13 @@
                                         const dateObj = new Date(meta.time);
                                         const dataFmt = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
                                         const horaFmt = dateObj.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-                                        const userShort = meta.user.split('@')[0];
-                                        metaEl.innerText = `${userShort} • ${dataFmt} ${horaFmt}`;
+                                        
+                                        // Pega o nome amigável ou usa o começo do email se não achar
+                                        const userEmail = meta.user.toLowerCase();
+                                        const nomeExibicao = NOMES_AMIGAVEIS[userEmail] || userEmail.split('@')[0];
+                                        
+                                        // Ex: Marketing - 09/02, 15:51h
+                                        metaEl.innerText = `${nomeExibicao} - ${dataFmt}, ${horaFmt}h`;
                                     } else {
                                         metaEl.innerText = "";
                                     }
@@ -272,14 +284,13 @@
                     const novoValor = el ? el.value.trim() : "";
                     const valorAntigo = el.dataset.original || "";
                     
-                    // SEMPRE atualiza o valor do prato (para garantir integridade)
+                    // SEMPRE atualiza o valor do prato
                     updates[`cardapio/${dia}/${cat}`] = novoValor;
 
                     // SÓ atualiza a DATA se o valor tiver mudado
                     if (novoValor !== valorAntigo) {
                         metaUpdates[`cardapio_metadata/${dia}/${cat}`] = { user: currentUserEmail, time: now };
                         alteracoesCount++;
-                        // Atualiza o "original" para a próxima comparação
                         el.dataset.original = novoValor;
                         const elCard = document.getElementById(`card_${dia}_${cat}`);
                         if(elCard) elCard.dataset.original = novoValor;
@@ -288,31 +299,28 @@
             });
 
             if (alteracoesCount === 0) {
-                // Se nada mudou, pergunta se quer forçar atualização da data
                 if(!confirm("Nenhuma mudança de texto detectada. Deseja forçar a atualização da data/hora mesmo assim?")) {
                     return; 
                 }
-                // Se o usuário quiser forçar, atualiza tudo
+                // Força atualização de data em todos os campos
                 dias.forEach(dia => {
                     categorias.forEach(cat => {
                          metaUpdates[`cardapio_metadata/${dia}/${cat}`] = { user: currentUserEmail, time: now };
                     });
                 });
-                alteracoesCount = 25; // Simbólico
+                alteracoesCount = 25; 
             }
 
             const logEntry = { user: currentUserEmail, timestamp: now, action: `Alteração de ${alteracoesCount} itens` };
             
             try {
                 await update(ref(db), updates);
-                // Só manda update de metadata se tiver algo pra mandar
                 if (Object.keys(metaUpdates).length > 0) {
                     await update(ref(db), metaUpdates);
                 }
                 await push(ref(db, 'historico_edicoes'), logEntry);
                 
                 alert("✅ Cardápio atualizado!");
-                // Recarrega para mostrar os novos metadados na tela
                 carregarDados();
                 carregarHistorico();
             } catch (err) { alert("Erro ao salvar: " + err.message); }
@@ -332,10 +340,13 @@
                 let html = '';
                 entries.forEach(entry => {
                     const date = new Date(entry.timestamp);
+                    const userEmail = entry.user.toLowerCase();
+                    const nomeExibicao = NOMES_AMIGAVEIS[userEmail] || userEmail.split('@')[0];
+                    
                     html += `
                         <div class="history-item ${Date.now() - entry.timestamp < 60000 ? 'recent' : ''}">
                             <div>
-                                <div class="h-user"><i class="fas fa-user-circle"></i> ${entry.user.split('@')[0]}</div>
+                                <div class="h-user"><i class="fas fa-user-circle"></i> ${nomeExibicao}</div>
                                 <div class="h-changes">${entry.action || 'Edição'}</div>
                             </div>
                             <div class="h-time">${date.toLocaleDateString()} <br> ${date.toLocaleTimeString()}</div>
