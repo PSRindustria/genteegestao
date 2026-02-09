@@ -19,7 +19,6 @@
             --border-color: #ddd;
         }
 
-        /* O PULO DO GATO: Isso impede que os inputs vazem para fora do card */
         * { box-sizing: border-box; }
 
         body { 
@@ -28,7 +27,7 @@
             margin: 0; 
             padding: 0; 
             color: #333; 
-            overflow-x: hidden; /* Evita rolagem lateral na página inteira */
+            overflow-x: hidden; 
         }
 
         /* --- TELAS DE AUTH E LOAD --- */
@@ -37,7 +36,6 @@
         #loading-screen { background: rgba(255,255,255,0.95); z-index: 1000; display: flex; }
         #access-denied { background: #fee2e2; color: #991b1b; display: none; }
         
-        /* Ajuste para o conteúdo não ficar escondido atrás da barra inferior */
         #app-screen { display: none; padding-bottom: 100px; }
 
         .auth-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; width: 350px; color: #333; }
@@ -64,7 +62,7 @@
 
         /* --- VIEW: EXCEL (HORIZONTAL) --- */
         .excel-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
-        table.excel-table { width: 100%; border-collapse: collapse; min-width: 800px; /* Garante que não esprema demais no mobile */ }
+        table.excel-table { width: 100%; border-collapse: collapse; min-width: 800px; }
         
         .excel-table th { background: var(--psr-blue); color: white; padding: 10px; text-align: left; font-size: 0.85rem; text-transform: uppercase; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
         .excel-table td { border-bottom: 1px solid #eee; border-right: 1px solid #eee; padding: 0; position: relative; vertical-align: top; }
@@ -76,25 +74,19 @@
         
         .meta-info { font-size: 0.6rem; color: #aaa; position: absolute; bottom: 2px; right: 5px; pointer-events: none; text-align: right; width: 100%; padding-right: 5px; background: transparent; }
 
-        /* --- VIEW: CARDS (VERTICAL) - AQUI ESTÁ A CORREÇÃO PRINCIPAL --- */
+        /* --- VIEW: CARDS (VERTICAL) --- */
         .cards-grid { 
             display: grid; 
-            /* PC: 5 colunas EXATAS */
             grid-template-columns: repeat(5, 1fr); 
             gap: 15px; 
             width: 100%;
         }
 
-        /* Responsividade para Cards */
-        @media (max-width: 1200px) {
-            .cards-grid { grid-template-columns: repeat(3, 1fr); } /* Tablet Grande: 3 colunas */
-        }
-        @media (max-width: 768px) {
-            .cards-grid { grid-template-columns: repeat(2, 1fr); } /* Tablet Pequeno: 2 colunas */
-        }
-        @media (max-width: 550px) {
-            .cards-grid { grid-template-columns: 1fr; } /* Celular: 1 coluna */
-            .view-toggles { display: none; } /* Esconde toggle no mobile, força vertical */
+        @media (max-width: 1200px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 550px) { 
+            .cards-grid { grid-template-columns: 1fr; } 
+            .view-toggles { display: none; } 
         }
 
         .day-card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; border: 1px solid transparent; transition: 0.2s; display: flex; flex-direction: column; }
@@ -105,9 +97,8 @@
         .input-group { width: 100%; }
         .input-group label { display: block; font-size: 0.7rem; color: #555; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* Input Corrigido */
         .card-input { 
-            width: 100%; /* Ocupa 100% do pai */
+            width: 100%; 
             padding: 8px 10px; 
             border: 1px solid #ccc; 
             border-radius: 4px; 
@@ -126,7 +117,6 @@
         
         .btn-save { background: #28a745; box-shadow: 0 4px 10px rgba(40,167,69,0.2); }
         .btn-save:hover { background: #218838; }
-        /* Botão Schedule removido daqui */
         .btn-clear { background: #dc3545; }
         .btn-clear:hover { background: #c82333; }
 
@@ -137,8 +127,6 @@
         .h-user { font-weight: bold; color: var(--psr-blue); font-size: 0.9rem; }
         .h-changes { font-size: 0.85rem; color: #555; margin-top: 3px; }
         .h-time { font-size: 0.8rem; color: #888; text-align: right; }
-
-        /* Modal style removido pois não é mais usado, mas mantendo a classe genérica caso precise no futuro não faz mal, porém removi o HTML do modal lá embaixo */
     </style>
 
     <script type="module">
@@ -217,6 +205,9 @@
                             const el = document.getElementById(id);
                             if(el) {
                                 el.value = valor;
+                                // SALVA O VALOR ORIGINAL PARA COMPARAÇÃO
+                                el.dataset.original = valor;
+
                                 let metaEl;
                                 if(id.startsWith('card')) {
                                     metaEl = el.nextElementSibling;
@@ -267,28 +258,61 @@
             });
         };
 
-        // --- SALVAR ---
+        // --- SALVAR COM INTELIGÊNCIA ---
         window.salvarTudo = async () => {
             if(!confirm("Atualizar o cardápio ao vivo?")) return;
             const updates = {};
             const metaUpdates = {};
             const now = Date.now();
+            let alteracoesCount = 0;
 
             dias.forEach(dia => {
                 categorias.forEach(cat => {
                     const el = document.getElementById(`excel_${dia}_${cat}`);
-                    const valor = el ? el.value.trim() : "";
-                    updates[`cardapio/${dia}/${cat}`] = valor;
-                    metaUpdates[`cardapio_metadata/${dia}/${cat}`] = { user: currentUserEmail, time: now };
+                    const novoValor = el ? el.value.trim() : "";
+                    const valorAntigo = el.dataset.original || "";
+                    
+                    // SEMPRE atualiza o valor do prato (para garantir integridade)
+                    updates[`cardapio/${dia}/${cat}`] = novoValor;
+
+                    // SÓ atualiza a DATA se o valor tiver mudado
+                    if (novoValor !== valorAntigo) {
+                        metaUpdates[`cardapio_metadata/${dia}/${cat}`] = { user: currentUserEmail, time: now };
+                        alteracoesCount++;
+                        // Atualiza o "original" para a próxima comparação
+                        el.dataset.original = novoValor;
+                        const elCard = document.getElementById(`card_${dia}_${cat}`);
+                        if(elCard) elCard.dataset.original = novoValor;
+                    }
                 });
             });
 
-            const logEntry = { user: currentUserEmail, timestamp: now, action: "Atualização Geral" };
+            if (alteracoesCount === 0) {
+                // Se nada mudou, pergunta se quer forçar atualização da data
+                if(!confirm("Nenhuma mudança de texto detectada. Deseja forçar a atualização da data/hora mesmo assim?")) {
+                    return; 
+                }
+                // Se o usuário quiser forçar, atualiza tudo
+                dias.forEach(dia => {
+                    categorias.forEach(cat => {
+                         metaUpdates[`cardapio_metadata/${dia}/${cat}`] = { user: currentUserEmail, time: now };
+                    });
+                });
+                alteracoesCount = 25; // Simbólico
+            }
+
+            const logEntry = { user: currentUserEmail, timestamp: now, action: `Alteração de ${alteracoesCount} itens` };
+            
             try {
                 await update(ref(db), updates);
-                await update(ref(db), metaUpdates);
+                // Só manda update de metadata se tiver algo pra mandar
+                if (Object.keys(metaUpdates).length > 0) {
+                    await update(ref(db), metaUpdates);
+                }
                 await push(ref(db, 'historico_edicoes'), logEntry);
+                
                 alert("✅ Cardápio atualizado!");
+                // Recarrega para mostrar os novos metadados na tela
                 carregarDados();
                 carregarHistorico();
             } catch (err) { alert("Erro ao salvar: " + err.message); }
