@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Cardápio - PSR</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --psr-blue: #003366; /* Azul PSR */
+            --psr-light-blue: #004d99;
+            --bg-gray: #f4f6f9;
+            --white: #ffffff;
+            --text-dark: #333;
+            --border: #e0e0e0;
+        }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-gray); margin: 0; padding: 0; color: var(--text-dark); }
+        
+        /* --- ESTILOS DE AUTENTICAÇÃO (MANTIDOS) --- */
+        .full-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        #login-screen { background: linear-gradient(135deg, var(--psr-blue) 0%, #001f3f 100%); color: white; z-index: 100; }
+        #access-denied { background-color: #fef2f2; color: #991b1b; z-index: 100; display: none; text-align: center; }
+        #loading-screen { background-color: white; z-index: 200; display: flex; }
+        #app-screen { display: none; padding-bottom: 50px; }
+
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; width: 90%; max-width: 400px; color: #333; }
+        .btn-auth { padding: 12px; width: 100%; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; font-weight: bold; background: white; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px; transition: 0.3s; }
+        .btn-auth:hover { background: #f0f0f0; }
+
+        /* --- CABEÇALHO --- */
+        header { background-color: var(--psr-blue); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .logo-area h1 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+        .logo-area span { font-size: 0.8rem; opacity: 0.8; font-weight: 300; }
+        .user-info { display: flex; align-items: center; gap: 15px; font-size: 0.9rem; }
+        .btn-logout { background: rgba(255,255,255,0.1); border: none; color: white; padding: 5px 15px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+        /* --- CONTROLES E LAYOUT --- */
+        .controls { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .toggle-layout { background: white; border: 1px solid var(--psr-blue); color: var(--psr-blue); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.3s; }
+        .toggle-layout.active { background: var(--psr-blue); color: white; }
+        .toggle-layout:hover { opacity: 0.9; }
+
+        /* --- GRID DO CARDÁPIO --- */
+        .menu-container { max-width: 1200px; margin: 0 auto; padding: 20px; transition: all 0.3s ease; }
+        
+        /* Modo Vertical (Padrão) */
+        .menu-grid { display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Modo Horizontal (Ativado via JS) */
+        .menu-grid.horizontal { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+
+        .day-card { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid transparent; transition: 0.3s; }
+        .day-card:hover { border-color: #bbdefb; box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
+        
+        .day-header { background-color: var(--psr-blue); color: white; padding: 10px; text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; }
+        
+        .day-body { padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .input-group label { font-size: 0.75rem; color: #666; font-weight: 600; margin-bottom: 2px; display: block; text-transform: uppercase; }
+        .input-group input, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Poppins', sans-serif; font-size: 0.9rem; box-sizing: border-box; transition: 0.2s; resize: vertical; }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--psr-blue); outline: none; background-color: #f0f8ff; }
+        .input-group textarea { min-height: 60px; }
+
+        /* --- BOTÕES DE AÇÃO (FIXO EMBAIXO) --- */
+        .action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); display: flex; justify-content: center; gap: 15px; z-index: 50; }
+        
+        .btn-action { padding: 12px 30px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem; display: flex; align-items: center; gap: 8px; transition: transform 0.2s; }
+        .btn-action:active { transform: scale(0.95); }
+        
+        .btn-update { background-color: #28a745; color: white; box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3); }
+        .btn-update:hover { background-color: #218838; }
+        
+        .btn-schedule { background-color: var(--psr-blue); color: white; box-shadow: 0 4px 10px rgba(0, 51, 102, 0.3); }
+        .btn-schedule:hover { background-color: var(--psr-light-blue); }
+        
+        .btn-clear { background-color: #dc3545; color: white; }
+        .btn-clear:hover { background-color: #c82333; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-box { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .modal-box h3 { margin-top: 0; color: var(--psr-blue); }
+        .modal-box input[type="date"] { width: 100%; padding: 10px; margin: 20px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 1.1rem; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .menu-grid.horizontal { grid-template-columns: 1fr; } /* Força vertical no mobile mesmo se horizontal estiver ativo */
+            .action-bar { flex-direction: column; padding: 10px; }
+            .btn-action { width: 100%; justify-content: center; }
+            .toggle-container { display: none; } /* Esconde opção horizontal no celular */
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // --- CONFIGURAÇÃO (Extraída do seu JSON) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4lN6iyKpdstb99vosxEDDaEn1QFXLCXI",
+            authDomain: "agenda-portal-2d149.firebaseapp.com",
+            databaseURL: "https://agenda-portal-2d149-default-rtdb.firebaseio.com",
+            projectId: "agenda-portal-2d149",
+            storageBucket: "agenda-portal-2d149.firebasestorage.app",
+            messagingSenderId: "172797946066",
+            appId: "1:172797946066:web:b3f50853717477661c650b"
+        };
+
+        const ALLOWED_EMAILS = [
+            'marketingpsrimpressao@gmail.com',
+            'rohsantos1@gmail.com',
+            'thaisportoaraujo6@gmail.com',
+            'milenessfranca@gmail.com'
+        ];
+
+        // Inicializar
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const provider = new GoogleAuthProvider();
+
+        // Elementos DOM
+        const loadingScreen = document.getElementById('loading-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const deniedScreen = document.getElementById('access-denied');
+        
+        // --- AUTENTICAÇÃO ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const email = user.email.toLowerCase().trim();
+                if (ALLOWED_EMAILS.includes(email)) {
+                    document.getElementById('user-email').innerText = email;
+                    loginScreen.style.display = 'none';
+                    deniedScreen.style.display = 'none';
+                    appScreen.style.display = 'block';
+                    carregarDadosDoFirebase(); // Carrega os dados assim que logar
+                } else {
+                    document.getElementById('denied-email-display').innerText = email;
+                    loginScreen.style.display = 'none';
+                    appScreen.style.display = 'none';
+                    deniedScreen.style.display = 'flex';
+                }
+            } else {
+                loginScreen.style.display = 'flex';
+                appScreen.style.display = 'none';
+            }
+            loadingScreen.style.display = 'none';
+        });
+
+        window.fazerLogin = () => signInWithPopup(auth, provider);
+        window.fazerLogout = () => signOut(auth).then(() => window.location.reload());
+
+        // --- LÓGICA DO CARDÁPIO ---
+
+        // Estrutura dos dias para o Loop
+        const diasSemana = ['segunda', 'terca', 'quarta', 'quinta', 'sexta'];
+        const campos = ['proteinas', 'opcional1', 'opcional2', 'guarnicao', 'saladas'];
+
+        // Função para ler os inputs e montar o objeto JSON
+        function capturarDadosFormulario() {
+            let dados = {};
+            diasSemana.forEach(dia => {
+                dados[dia] = {};
+                campos.forEach(campo => {
+                    const valor = document.getElementById(`${dia}_${campo}`).value;
+                    dados[dia][campo] = valor;
+                });
+            });
+            return dados;
+        }
+
+        // 1. CARREGAR (Read)
+        function carregarDadosDoFirebase() {
+            const dbRef = ref(db);
+            get(child(dbRef, `cardapio`)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    diasSemana.forEach(dia => {
+                        if (data[dia]) {
+                            campos.forEach(campo => {
+                                // Preenche o input se o dado existir, senão deixa vazio
+                                document.getElementById(`${dia}_${campo}`).value = data[dia][campo] || '';
+                            });
+                        }
+                    });
+                    console.log("Dados carregados!");
+                } else {
+                    console.log("Nenhum dado encontrado.");
+                }
+            }).catch((error) => {
+                console.error("Erro ao carregar:", error);
+                alert("Erro ao carregar dados do Firebase.");
+            });
+        }
+
+        // 2. ATUALIZAR (Write Live)
+        window.atualizarCardapio = function() {
+            if(!confirm("Tem certeza que deseja atualizar o cardápio AO VIVO?")) return;
+            
+            const dados = capturarDadosFormulario();
+            set(ref(db, 'cardapio'), dados)
+                .then(() => alert("Cardápio Atualizado com Sucesso! ✅"))
+                .catch((erro) => alert("Erro ao atualizar: " + erro));
+        };
+
+        // 3. LIMPAR
+        window.limparCampos = function() {
+            if(!confirm("Isso apagará todos os campos da tela. Continuar?")) return;
+            document.querySelectorAll('input, textarea').forEach(input => input.value = '');
+        };
+
+        // 4. PROGRAMAR (Write History)
+        window.abrirModalProgramar = function() {
+            document.getElementById('modalProgramar').style.display = 'flex';
+        };
+
+        window.fecharModal = function() {
+            document.getElementById('modalProgramar').style.display = 'none';
+        };
+
+        window.salvarProgramacao = function() {
+            const dataSelecionada = document.getElementById('dataProgramacao').value;
+            if (!dataSelecionada) return alert("Selecione uma data!");
+
+            const dados = capturarDadosFormulario();
+            
+            // Salva em um nó separado "historico_programacao" organizado por data
+            set(ref(db, 'historico_programacao/' + dataSelecionada), dados)
+                .then(() => {
+                    alert(`Programação salva para o dia ${dataSelecionada}! 📅`);
+                    fecharModal();
+                })
+                .catch((erro) => alert("Erro ao programar: " + erro));
+        };
+
+        // Funções de Layout
+        window.mudarLayout = function(tipo) {
+            const grid = document.getElementById('menuGrid');
+            const btnV = document.getElementById('btnVertical');
+            const btnH = document.getElementById('btnHorizontal');
+
+            if (tipo === 'horizontal') {
+                grid.classList.add('horizontal');
+                btnH.classList.add('active');
+                btnV.classList.remove('active');
+            } else {
+                grid.classList.remove('horizontal');
+                btnV.classList.add('active');
+                btnH.classList.remove('active');
+            }
+        };
+
+    </script>
+</head>
+<body>
+
+    <div id="loading-screen" class="full-screen">
+        <i class="fas fa-circle-notch fa-spin fa-2x" style="color: var(--psr-blue);"></i>
+    </div>
+
+    <div id="login-screen" class="full-screen">
+        <div class="auth-card">
+            <h2 style="color: var(--psr-blue); margin-bottom: 5px;">Portal PSR</h2>
+            <p style="color: #666; font-size: 0.9rem;">Gestão de Cardápio</p>
+            <button onclick="fazerLogin()" class="btn-auth">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+                Entrar com Google
+            </button>
+        </div>
+    </div>
+
+    <div id="access-denied" class="full-screen">
+        <div class="auth-card" style="border-top: 5px solid #dc3545;">
+            <h2 style="color: #dc3545;">Acesso Negado</h2>
+            <p>O email <b id="denied-email-display"></b> não tem permissão.</p>
+            <button onclick="fazerLogout()" class="btn-auth" style="background:#f8d7da; color:#721c24; border:none;">Sair</button>
+        </div>
+    </div>
+
+    <div id="app-screen">
+        <header>
+            <div class="logo-area">
+                <h1>Painel Cardápio</h1>
+                <span>PSR Impressão</span>
+            </div>
+            <div class="user-info">
+                <span id="user-email">...</span>
+                <button class="btn-logout" onclick="fazerLogout()" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
+
+        <div class="controls">
+            <div style="font-weight: bold; color: var(--psr-blue);">Visualização:</div>
+            <div class="toggle-container">
+                <button id="btnVertical" class="toggle-layout active" onclick="mudarLayout('vertical')"><i class="fas fa-mobile-alt"></i> Vertical</button>
+                <button id="btnHorizontal" class="toggle-layout" onclick="mudarLayout('horizontal')"><i class="fas fa-columns"></i> Horizontal</button>
+            </div>
+        </div>
+
+        <div class="menu-container">
+            <div id="menuGrid" class="menu-grid">
+                
+                <div class="day-card">
+                    <div class="day-header">Segunda-Feira</div>
+                    <div class="day-body">
+                        <div class="input-group">
+                            <label>Proteínas</label>
+                            <input type="text" id="segunda_proteinas" placeholder="Ex: Strogonoff...">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 1</label>
+                            <input type="text" id="segunda_opcional1">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 2</label>
+                            <input type="text" id="segunda_opcional2">
+                        </div>
+                        <div class="input-group">
+                            <label>Guarnição</label>
+                            <textarea id="segunda_guarnicao"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Saladas</label>
+                            <textarea id="segunda_saladas"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">Terça-Feira</div>
+                    <div class="day-body">
+                        <div class="input-group">
+                            <label>Proteínas</label>
+                            <input type="text" id="terca_proteinas">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 1</label>
+                            <input type="text" id="terca_opcional1">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 2</label>
+                            <input type="text" id="terca_opcional2">
+                        </div>
+                        <div class="input-group">
+                            <label>Guarnição</label>
+                            <textarea id="terca_guarnicao"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Saladas</label>
+                            <textarea id="terca_saladas"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">Quarta-Feira</div>
+                    <div class="day-body">
+                        <div class="input-group">
+                            <label>Proteínas</label>
+                            <input type="text" id="quarta_proteinas">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 1</label>
+                            <input type="text" id="quarta_opcional1">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 2</label>
+                            <input type="text" id="quarta_opcional2">
+                        </div>
+                        <div class="input-group">
+                            <label>Guarnição</label>
+                            <textarea id="quarta_guarnicao"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Saladas</label>
+                            <textarea id="quarta_saladas"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">Quinta-Feira</div>
+                    <div class="day-body">
+                        <div class="input-group">
+                            <label>Proteínas</label>
+                            <input type="text" id="quinta_proteinas">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 1</label>
+                            <input type="text" id="quinta_opcional1">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 2</label>
+                            <input type="text" id="quinta_opcional2">
+                        </div>
+                        <div class="input-group">
+                            <label>Guarnição</label>
+                            <textarea id="quinta_guarnicao"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Saladas</label>
+                            <textarea id="quinta_saladas"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">Sexta-Feira</div>
+                    <div class="day-body">
+                        <div class="input-group">
+                            <label>Proteínas</label>
+                            <input type="text" id="sexta_proteinas">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 1</label>
+                            <input type="text" id="sexta_opcional1">
+                        </div>
+                        <div class="input-group">
+                            <label>Opcional 2</label>
+                            <input type="text" id="sexta_opcional2">
+                        </div>
+                        <div class="input-group">
+                            <label>Guarnição</label>
+                            <textarea id="sexta_guarnicao"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Saladas</label>
+                            <textarea id="sexta_saladas"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-action btn-clear" onclick="limparCampos()">
+                <i class="fas fa-trash-alt"></i> Limpar
+            </button>
+            <button class="btn-action btn-schedule" onclick="abrirModalProgramar()">
+                <i class="fas fa-calendar-alt"></i> Programar
+            </button>
+            <button class="btn-action btn-update" onclick="atualizarCardapio()">
+                <i class="fas fa-sync-alt"></i> Atualizar Agora
+            </button>
+        </div>
+    </div>
+
+    <div id="modalProgramar" class="modal-overlay">
+        <div class="modal-box">
+            <h3>Programar Cardápio</h3>
+            <p>Escolha a data de início desta programação:</p>
+            <input type="date" id="dataProgramacao">
+            <div class="modal-actions">
+                <button class="btn-action btn-clear" onclick="fecharModal()" style="font-size: 0.9rem;">Cancelar</button>
+                <button class="btn-action btn-schedule" onclick="salvarProgramacao()" style="font-size: 0.9rem;">Salvar Data</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
