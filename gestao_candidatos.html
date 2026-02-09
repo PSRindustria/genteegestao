@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banco de Talentos Inteligente - PSR</title>
+    <title>Banco de Talentos - PSR</title>
     <meta name="robots" content="noindex, nofollow">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='%23003366'>👔</text></svg>">
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
         * { box-sizing: border-box; outline: none; }
         body { font-family: 'Poppins', sans-serif; background-color: var(--bg-gray); margin: 0; color: var(--text); padding-bottom: 50px; }
 
-        /* --- LOGIN & LOAD --- */
+        /* --- TELAS DE LOGIN & LOAD --- */
         .full-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 999; }
         #login-screen { background: linear-gradient(135deg, var(--psr-blue) 0%, #001a33 100%); color: white; }
         #loading-screen { background: rgba(255,255,255,0.95); z-index: 1000; }
@@ -68,10 +68,30 @@
         .btn-add { background: var(--success); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         .btn-add:hover { background: #218838; }
 
-        /* --- TABLE --- */
+        /* --- TABLE & SORTING --- */
         .table-container { background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; min-height: 400px; }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
-        th { background: #f8f9fa; text-align: left; padding: 15px; font-size: 0.8rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #eee; position: sticky; top: 0; z-index: 10; }
+        
+        /* Cabeçalho Clicável para Ordenação */
+        th { 
+            background: #f8f9fa; 
+            text-align: left; 
+            padding: 15px; 
+            font-size: 0.8rem; 
+            text-transform: uppercase; 
+            color: #666; 
+            border-bottom: 2px solid #eee; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+            cursor: pointer; /* Indica clicável */
+            user-select: none;
+            transition: 0.2s;
+        }
+        th:hover { background: #e9ecef; color: var(--psr-blue); }
+        th i { margin-left: 5px; opacity: 0.3; }
+        th.sort-asc i, th.sort-desc i { opacity: 1; color: var(--psr-blue); }
+
         td { padding: 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: middle; }
         tr:hover { background: #f0f7ff; }
 
@@ -79,6 +99,7 @@
         .badge-area { background: #e3f2fd; color: #0d47a1; }
         .badge-prod { background: #e8f5e9; color: #1b5e20; }
         .badge-adm { background: #fff3e0; color: #e65100; }
+        .badge-fin { background: #fce4ec; color: #880e4f; }
         .dist-badge { background: #f3e5f5; color: #7b1fa2; font-size: 0.7rem; margin-left: 5px; padding: 2px 5px; border-radius: 3px; }
 
         .actions-cell { display: flex; gap: 10px; }
@@ -109,7 +130,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, set, get, child, update, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Configuração do Firebase
+        // Configuração
         const firebaseConfig = {
             apiKey: "AIzaSyD4lN6iyKpdstb99vosxEDDaEn1QFXLCXI",
             authDomain: "agenda-portal-2d149.firebaseapp.com",
@@ -127,16 +148,22 @@
             'milenessfranca@gmail.com'
         ];
 
+        // --- CONFIGURAÇÃO ONEDRIVE ---
+        // Se você tiver o link da pasta, coloque aqui. Se deixar vazio, ele abre a busca geral.
+        // Exemplo: "https://onedrive.live.com/?id=XXXX&cid=XXXX"
+        const ONEDRIVE_PASTA_URL = "https://onedrive.live.com/"; 
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
         const provider = new GoogleAuthProvider();
 
         let allCandidates = [];
+        let filteredCandidates = [];
         let currentEditId = null;
+        let sortConfig = { key: null, direction: 'asc' }; // Controle de Ordenação
 
-        // --- MAPA DE COORDENADAS (ATLAS LOCAL) ---
-        // Adicionei coordenadas fixas para tornar a busca INSTANTÂNEA na região
+        // --- ATLAS DE COORDENADAS (Para busca por KM) ---
         const CITY_COORDS = {
             "paracambi": {lat: -22.6111, lon: -43.7125},
             "japeri": {lat: -22.6436, lon: -43.6542},
@@ -175,10 +202,10 @@
         window.login = () => signInWithPopup(auth, provider);
         window.logout = () => signOut(auth).then(() => location.reload());
 
-        // --- CRUD CANDIDATOS ---
+        // --- CRUD ---
         async function carregarCandidatos() {
             const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Sincronizando Banco de Talentos...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Carregando banco de talentos...</td></tr>';
             
             try {
                 const snapshot = await get(child(ref(db), 'candidatos'));
@@ -191,6 +218,7 @@
                         });
                     });
                 }
+                filteredCandidates = [...allCandidates]; // Inicializa filtrados
                 aplicarFiltros();
             } catch (error) {
                 console.error(error);
@@ -199,7 +227,6 @@
         }
 
         window.salvarCandidato = async () => {
-            // (Mesma lógica de antes, mantida)
             const data = {
                 nome: document.getElementById('c_nome').value,
                 email: document.getElementById('c_email').value,
@@ -214,7 +241,7 @@
                 endereco: document.getElementById('c_endereco').value,
                 bairro: document.getElementById('c_bairro').value,
                 cidade: document.getElementById('c_cidade').value,
-                link_curriculo: document.getElementById('c_link').value,
+                // Removemos o campo manual de link, pois agora é automático
                 data_cadastro: currentEditId ? (allCandidates.find(c => c.id === currentEditId).data_cadastro) : new Date().toISOString()
             };
 
@@ -223,20 +250,18 @@
             try {
                 if (currentEditId) {
                     await update(ref(db, `candidatos/${currentEditId}`), data);
-                    alert("Atualizado com sucesso!");
+                    alert("Salvo com sucesso!");
                 } else {
                     await push(ref(db, 'candidatos'), data);
                     alert("Cadastrado com sucesso!");
                 }
                 closeModal();
                 carregarCandidatos();
-            } catch (e) {
-                alert("Erro ao salvar: " + e.message);
-            }
+            } catch (e) { alert("Erro: " + e.message); }
         };
 
         window.deletarCandidato = async (id) => {
-            if (confirm("Excluir permanentemente?")) {
+            if (confirm("Deseja realmente excluir?")) {
                 await remove(ref(db, `candidatos/${id}`));
                 carregarCandidatos();
             }
@@ -247,17 +272,59 @@
             if (!c) return;
             currentEditId = id;
             document.getElementById('modalTitle').innerText = "Editar Candidato";
-            const fields = ['nome', 'email', 'nascimento', 'cpf', 'telefone', 'whatsapp', 'sexo', 'civil', 'area', 'cep', 'endereco', 'bairro', 'cidade', 'link'];
+            const fields = ['nome', 'email', 'nascimento', 'cpf', 'telefone', 'whatsapp', 'sexo', 'civil', 'area', 'cep', 'endereco', 'bairro', 'cidade'];
             fields.forEach(f => {
-                const key = f === 'civil' ? 'estado_civil' : (f === 'link' ? 'link_curriculo' : f);
+                const key = f === 'civil' ? 'estado_civil' : f;
                 document.getElementById(`c_${f}`).value = c[key] || '';
             });
             openModal();
         };
 
+        // --- ORDENAÇÃO (SORTING) ---
+        window.sortBy = (key) => {
+            // Alterna direção se clicar na mesma coluna
+            if (sortConfig.key === key) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'asc';
+            }
+            
+            // Atualiza setas no HTML
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                th.querySelector('i').className = 'fas fa-sort'; // Ícone neutro
+            });
+            
+            const currentTh = document.querySelector(`th[onclick="sortBy('${key}')"]`);
+            if(currentTh) {
+                currentTh.classList.add(sortConfig.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                currentTh.querySelector('i').className = sortConfig.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+
+            // Executa a ordenação
+            filteredCandidates.sort((a, b) => {
+                let valA = a[key] ? a[key].toString().toLowerCase() : '';
+                let valB = b[key] ? b[key].toString().toLowerCase() : '';
+
+                // Tratamento especial para idade (cálculo de data)
+                if (key === 'nascimento') {
+                    valA = a.nascimento ? new Date(a.nascimento).getTime() : 0;
+                    valB = b.nascimento ? new Date(b.nascimento).getTime() : 0;
+                    // Inverte lógica pois data maior = pessoa mais nova
+                    return sortConfig.direction === 'asc' ? valB - valA : valA - valB;
+                }
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderTable(filteredCandidates);
+        };
+
         // --- FILTROS INTELIGENTES ---
 
-        // 1. Função Levenshtein (Para tolerar erros de digitação)
         function levenshtein(a, b) {
             const matrix = [];
             for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -274,7 +341,6 @@
             return matrix[b.length][a.length];
         }
 
-        // Verifica se texto A parece com texto B (Fuzzy Match)
         function isFuzzyMatch(textoInput, textoBanco) {
             if (!textoInput) return true;
             if (!textoBanco) return false;
@@ -282,85 +348,81 @@
             const a = textoInput.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const b = textoBanco.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-            if (b.includes(a)) return true; // Match exato parcial
-
-            // Tolerância: Permite 1 erro a cada 4 caracteres (ex: 2 erros numa palavra de 8 letras)
+            if (b.includes(a)) return true;
             const maxErrors = Math.floor(a.length / 4) + 1; 
             const dist = levenshtein(a, b);
             return dist <= maxErrors; 
         }
 
-        // 2. Cálculo de Distância (Haversine)
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            var R = 6371; // Raio da Terra em km
+            var R = 6371; 
             var dLat = deg2rad(lat2 - lat1);
             var dLon = deg2rad(lon2 - lon1);
-            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
             var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            var d = R * c; 
-            return d;
+            return R * c; 
         }
-
         function deg2rad(deg) { return deg * (Math.PI / 180); }
 
         window.aplicarFiltros = () => {
             const btnFilter = document.querySelector('.btn-filter');
-            btnFilter.innerText = "Processando...";
+            btnFilter.innerText = "Filtrando...";
             
-            setTimeout(() => { // Timeout para não travar a UI enquanto calcula
+            setTimeout(() => {
                 const fNome = document.getElementById('f_nome').value;
                 const fArea = document.getElementById('f_area').value;
                 const fCidade = document.getElementById('f_cidade').value;
-                const fBairro = document.getElementById('f_bairro').value; // Novo filtro Bairro
+                const fBairro = document.getElementById('f_bairro').value;
                 
-                // Filtros Geo
+                const fIdadeMin = parseInt(document.getElementById('f_idade_min').value) || 0;
+                const fIdadeMax = parseInt(document.getElementById('f_idade_max').value) || 100;
+                
+                // Geo
                 const fGeoRef = document.getElementById('f_geo_ref').value.toLowerCase().trim();
                 const fGeoRaio = parseFloat(document.getElementById('f_geo_km').value) || 0;
+                let coordsRef = (fGeoRef && CITY_COORDS[fGeoRef]) ? CITY_COORDS[fGeoRef] : null;
 
-                let coordsRef = null;
-                if (fGeoRef && CITY_COORDS[fGeoRef]) {
-                    coordsRef = CITY_COORDS[fGeoRef];
-                }
-
-                const filtered = allCandidates.filter(c => {
-                    // Match Inteligente (Fuzzy)
+                filteredCandidates = allCandidates.filter(c => {
+                    // Match Texto
                     const matchNome = isFuzzyMatch(fNome, c.nome);
                     const matchArea = fArea === "" || c.area === fArea;
                     const matchCidade = isFuzzyMatch(fCidade, c.cidade);
                     const matchBairro = isFuzzyMatch(fBairro, c.bairro);
 
-                    // Match Geográfico
+                    // Match Idade
+                    let idade = 0;
+                    if(c.nascimento) {
+                        const birth = new Date(c.nascimento);
+                        if(!isNaN(birth)) idade = new Date().getFullYear() - birth.getFullYear();
+                    }
+                    const matchIdade = idade >= fIdadeMin && idade <= fIdadeMax;
+
+                    // Match Geo
                     let matchGeo = true;
-                    let distText = "";
-                    
                     if (fGeoRaio > 0 && fGeoRef) {
                         const candCityNorm = (c.cidade || "").toLowerCase().trim();
-                        // Se temos coordenadas da cidade do candidato
                         if (candCityNorm && CITY_COORDS[candCityNorm] && coordsRef) {
                             const coordsCand = CITY_COORDS[candCityNorm];
                             const dist = getDistanceFromLatLonInKm(coordsRef.lat, coordsRef.lon, coordsCand.lat, coordsCand.lon);
-                            
-                            c.distanciaCalculada = dist.toFixed(1); // Salva para exibir na tabela
+                            c.distanciaCalculada = dist.toFixed(1);
                             if (dist > fGeoRaio) matchGeo = false;
-                        } else if (fGeoRef !== candCityNorm) {
-                            // Se não conhecemos a cidade e ela não é a cidade referência, 
-                            // por segurança, ocultamos (ou mostramos se quiser ser permissivo)
-                            // Aqui vamos ocultar para ser preciso
+                        } else if (!isFuzzyMatch(fGeoRef, candCityNorm)) {
                             matchGeo = false;
-                            
-                            // Exceção: Se for a MESMA cidade digitada (ex: Paracambi = Paracambi), a distância é 0
-                            if (isFuzzyMatch(fGeoRef, candCityNorm)) matchGeo = true;
                         }
                     } else {
                         c.distanciaCalculada = null;
                     }
 
-                    return matchNome && matchArea && matchCidade && matchBairro && matchGeo;
+                    return matchNome && matchArea && matchCidade && matchBairro && matchGeo && matchIdade;
                 });
 
-                renderTable(filtered);
+                // Reaplica ordenação atual se houver
+                if (sortConfig.key) {
+                    window.sortBy(sortConfig.key); // Chama o sort novamente
+                } else {
+                    renderTable(filteredCandidates);
+                }
+                
                 btnFilter.innerText = "Aplicar Filtros";
             }, 50);
         };
@@ -384,17 +446,22 @@
                 
                 let badgeClass = 'badge-area';
                 if (c.area === 'Produção') badgeClass = 'badge-prod';
-                if (['Administrativo','Financeiro','RH'].includes(c.area)) badgeClass = 'badge-adm';
+                if (['Administrativo','Financeiro','RH','Comercial'].includes(c.area)) badgeClass = 'badge-adm';
+                if (c.area === 'Financeiro') badgeClass = 'badge-fin';
 
+                // --- LÓGICA DO ONEDRIVE ---
+                // Cria o nome do arquivo baseado no email (ex: gabrielesantiago.rh)
                 let btnLink = `<span style="color:#eee; cursor:default"><i class="fas fa-link"></i></span>`;
-                if (c.link_curriculo && c.link_curriculo.length > 5) {
-                    btnLink = `<a href="${c.link_curriculo}" target="_blank" class="btn-icon" style="color:#0078d4" title="Abrir Currículo"><i class="fas fa-cloud"></i></a>`;
+                if (c.email) {
+                    const nomeArquivo = c.email.split('@')[0]; // Pega tudo antes do @
+                    // Link de busca no OneDrive
+                    const linkOneDrive = `https://onedrive.live.com/?id=root&q=${nomeArquivo}`;
+                    btnLink = `<a href="${linkOneDrive}" target="_blank" class="btn-icon" style="color:#0078d4" title="Buscar '${nomeArquivo}' no OneDrive"><i class="fas fa-cloud"></i></a>`;
                 }
 
                 const wpp = c.whatsapp ? c.whatsapp.replace(/\D/g, '') : '';
                 const btnWpp = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" class="btn-icon" style="color:#25d366"><i class="fab fa-whatsapp"></i></a>` : `<span class="btn-icon" style="color:#eee"><i class="fab fa-whatsapp"></i></span>`;
 
-                // Exibição da Distância (se houver filtro Geo ativo)
                 let localHtml = `${c.cidade || '-'} / ${c.bairro || '-'}`;
                 if (c.distanciaCalculada) {
                     localHtml += `<span class="dist-badge"><i class="fas fa-map-marker-alt"></i> ${c.distanciaCalculada}km</span>`;
@@ -440,13 +507,13 @@
 
     <div id="loading-screen" class="full-screen">
         <i class="fas fa-spinner fa-spin fa-3x" style="color:var(--psr-blue)"></i>
-        <p style="margin-top:15px">Carregando Inteligência...</p>
+        <p style="margin-top:15px">Acessando Banco de Talentos...</p>
     </div>
 
     <div id="login-screen" class="full-screen">
         <div class="auth-card">
             <h2>PSR Talentos</h2>
-            <p>Acesso Restrito Inteligente</p>
+            <p>Acesso Restrito ao RH</p>
             <button onclick="login()" class="btn-google">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"> Entrar com Google
             </button>
@@ -475,28 +542,39 @@
 
         <div class="main-container">
             <aside class="sidebar">
-                <h3><i class="fas fa-filter"></i> Filtros Inteligentes</h3>
+                <h3><i class="fas fa-filter"></i> Filtros</h3>
                 
                 <div class="filter-group">
-                    <label>Nome (Aceita erros)</label>
+                    <label>Nome do Candidato</label>
                     <input type="text" id="f_nome" class="filter-input" placeholder="Ex: Joa da Silva">
                 </div>
 
                 <div class="filter-group">
-                    <label>Área</label>
+                    <label>Área Pretendida</label>
                     <select id="f_area" class="filter-input">
                         <option value="">Todas</option>
                         <option value="Produção">Produção</option>
-                        <option value="Financeiro">Financeiro</option>
-                        <option value="RH">RH</option>
                         <option value="Administração">Administração</option>
+                        <option value="RH">RH</option>
+                        <option value="Financeiro">Financeiro</option>
                         <option value="Comercial">Comercial</option>
                         <option value="Logística">Logística</option>
+                        <option value="TI">TI</option>
+                        <option value="Operacional">Operacional</option>
                     </select>
                 </div>
 
+                <div class="filter-group">
+                    <label>Idade</label>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <input type="number" id="f_idade_min" class="filter-input" placeholder="Min" style="width:48%">
+                        <span>-</span>
+                        <input type="number" id="f_idade_max" class="filter-input" placeholder="Max" style="width:48%">
+                    </div>
+                </div>
+
                 <div class="filter-group geo-group">
-                    <label><i class="fas fa-map-marked-alt"></i> Busca nas Proximidades</label>
+                    <label><i class="fas fa-map-marked-alt"></i> Busca Inteligente (KM)</label>
                     <input type="text" id="f_geo_ref" class="filter-input" placeholder="Referência (Ex: Paracambi)" style="margin-bottom:5px">
                     <div style="display:flex; align-items:center; gap:5px">
                         <input type="number" id="f_geo_km" class="filter-input" placeholder="Raio (km)">
@@ -505,8 +583,8 @@
                 </div>
 
                 <div class="filter-group">
-                    <label>Cidade (Texto Livre)</label>
-                    <input type="text" id="f_cidade" class="filter-input" placeholder="Ex: Nova Iguacu">
+                    <label>Cidade (Aceita erros)</label>
+                    <input type="text" id="f_cidade" class="filter-input" placeholder="Ex: Novi Guacu">
                 </div>
 
                 <div class="filter-group">
@@ -530,11 +608,11 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Candidato</th>
-                                <th>Área</th>
-                                <th>Idade</th>
-                                <th>Localização</th>
-                                <th>Telefone</th>
+                                <th onclick="sortBy('nome')">Candidato <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('area')">Área <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('nascimento')">Idade <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('cidade')">Localização <i class="fas fa-sort"></i></th>
+                                <th onclick="sortBy('telefone')">Telefone <i class="fas fa-sort"></i></th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -561,7 +639,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Email</label>
+                        <label>Email (Gera o link do CV)</label>
                         <input type="email" id="c_email">
                     </div>
                     <div class="form-group">
@@ -587,11 +665,13 @@
                         <select id="c_area" required>
                             <option value="">Selecione...</option>
                             <option value="Produção">Produção</option>
-                            <option value="Financeiro">Financeiro</option>
-                            <option value="RH">RH</option>
                             <option value="Administração">Administração</option>
+                            <option value="RH">RH</option>
+                            <option value="Financeiro">Financeiro</option>
                             <option value="Comercial">Comercial</option>
                             <option value="Logística">Logística</option>
+                            <option value="TI">TI</option>
+                            <option value="Operacional">Operacional</option>
                         </select>
                     </div>
 
@@ -607,11 +687,6 @@
                     <div class="form-group">
                         <label>Estado Civil</label>
                         <input type="text" id="c_civil">
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Link do Currículo</label>
-                        <input type="url" id="c_link" placeholder="https://onedrive.live.com/...">
                     </div>
 
                     <div class="form-group">
