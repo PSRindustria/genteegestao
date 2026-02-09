@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;">
+    <meta name="robots" content="noindex, nofollow">
+    <title>PortalPSR - RH</title>
+   
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        /* --- ESTILOS VISUAIS --- */
+        :root {
+            --psr-primary: #2563eb;
+            --psr-bg: #f3f4f6;
+            --psr-card-bg: #ffffff;
+            --psr-text: #1f2937;
+            --psr-text-sec: #6b7280;
+        }
+
+        /* Correção para inputs não vazarem */
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--psr-bg);
+            color: var(--psr-text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- TELA DE LOGIN --- */
+        #psr-login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(243, 244, 246, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+
+        .psr-login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #e5e7eb;
+            position: relative;
+        }
+
+        .psr-input-wrapper {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .psr-login-box input {
+            width: 100%;
+            padding: 12px 45px 12px 15px; 
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .psr-login-box input:focus { border-color: var(--psr-primary); }
+
+        .psr-eye-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1rem;
+            z-index: 10;
+        }
+        .psr-eye-icon:hover { color: var(--psr-primary); }
+
+        .psr-login-box button {
+            background-color: var(--psr-primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        .psr-login-box button:hover { background-color: #1d4ed8; }
+
+        .psr-error-msg {
+            color: #ef4444;
+            margin-top: 15px;
+            display: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* --- PAINEL PRINCIPAL --- */
+        #psr-main-content {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+
+        header { margin-bottom: 40px; text-align: center; }
+        h1 { font-size: 2.5rem; color: var(--psr-text); margin-bottom: 10px; font-weight: 700; text-align: center; }
+        p.subtitle { color: var(--psr-text-sec); font-size: 1.1rem; text-align: center; }
+
+        .psr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .psr-card {
+            background-color: var(--psr-card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 220px;
+        }
+
+        .psr-card.active { color: var(--psr-text); cursor: pointer; }
+        .psr-card.active:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1);
+            border-color: var(--psr-primary);
+        }
+        .psr-card.active h2 { font-size: 1.3rem; margin-bottom: 10px; color: var(--psr-primary); font-weight: 600; }
+        .psr-card.active span { font-size: 2.5rem; margin-bottom: 15px; display: block; }
+        .psr-card p { font-size: 0.95rem; color: var(--psr-text-sec); margin: 0; }
+        
+        .psr-card.empty { border: 2px dashed #d1d5db; background: transparent; color: #9ca3af; cursor: default; }
+        .psr-card.empty h2 { font-size: 1.3rem; font-weight: 400; color: #9ca3af; }
+
+        @keyframes psr-shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.8rem; }
+            .psr-login-box { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="psr-login-overlay">
+        <div class="psr-login-box">
+            <h2>Portal PSR</h2>
+            <p style="margin-top: 10px; color: #666;">Acesso Restrito</p>
+            
+            <div class="psr-input-wrapper">
+                <input type="password" id="psrPasswordInput" placeholder="Digite a senha" autocomplete="off">
+                <i class="fa-solid fa-eye psr-eye-icon" id="psrTogglePass"></i>
+            </div>
+
+            <button id="psrBtnLogin">Entrar</button>
+            <p class="psr-error-msg" id="psrErrorMsg">Senha incorreta</p>
+        </div>
+    </div>
+
+    <div id="psr-main-content">
+        <header>
+            <h1>Painel de Recursos Humanos</h1>
+            <p class="subtitle">Selecione o módulo desejado</p>
+        </header>
+
+        <div class="psr-grid">
+            
+            <a href="#" class="psr-card active"> <span>🍽️</span> <h2>Cardápio</h2> <p>Cardápio semanal da empresa</p>
+            </a>
+
+            <a href="#" class="psr-card active"> <span>👥</span> <h2>Candidatos</h2> <p>Gestão de vagas e currículos</p>
+            </a>
+
+            <a href="https://psrindustria.github.io/PaineldeControle/geradorgrafico/gerador.html" class="psr-card active">
+                <span>🎨</span> <h2>Gerador Gráfico</h2> <p>Criação de artes visuais</p>
+            </a>
+
+            <a href="#" class="psr-card active"> <span>📢</span> <h2>Comunicados</h2> <p>Mural de avisos internos</p>
+            </a>
+
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        // Senha: gentegestaopsr
+        const TOKEN_SEGURO = "273707f61647375676567647e65676"; 
+        
+        const STORAGE_KEY = "psr_hex_access_v9";
+        const DIAS_EXPIRACAO = 30;
+
+        const overlay = document.getElementById('psr-login-overlay');
+        const mainContent = document.getElementById('psr-main-content');
+        const input = document.getElementById('psrPasswordInput');
+        const btn = document.getElementById('psrBtnLogin');
+        const errorMsg = document.getElementById('psrErrorMsg');
+        const toggleBtn = document.getElementById('psrTogglePass');
+
+        // Inicialização
+        function init() {
+            const lastLogin = localStorage.getItem(STORAGE_KEY);
+            const now = new Date().getTime();
+            const validTime = DIAS_EXPIRACAO * 24 * 60 * 60 * 1000;
+
+            if (lastLogin && (now - lastLogin < validTime)) {
+                liberarAcesso(false); 
+            } else {
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        // Função de Criptografia Leve
+        function encriptar(texto) {
+            let hex = '';
+            for(let i=0; i<texto.length; i++) {
+                hex += texto.charCodeAt(i).toString(16);
+            }
+            return hex.split("").reverse().join("");
+        }
+
+        // Validação
+        function tentarLogin() {
+            const senha = input.value.trim(); 
+            
+            if (encriptar(senha) === TOKEN_SEGURO) {
+                localStorage.setItem(STORAGE_KEY, new Date().getTime());
+                liberarAcesso(true);
+            } else {
+                bloquearAcesso();
+            }
+        }
+
+        function liberarAcesso(animar) {
+            overlay.style.display = 'none';
+            mainContent.style.display = 'flex';
+            if(animar) setTimeout(() => { mainContent.style.opacity = '1'; }, 10);
+            else mainContent.style.opacity = '1';
+        }
+
+        function bloquearAcesso() {
+            errorMsg.style.display = "block";
+            const box = document.querySelector('.psr-login-box');
+            box.style.animation = 'none'; 
+            box.offsetHeight; 
+            box.style.animation = "psr-shake 0.4s";
+            input.value = ""; 
+            input.focus();
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            if(input.type === "password") {
+                input.type = "text";
+                toggleBtn.classList.remove('fa-eye');
+                toggleBtn.classList.add('fa-eye-slash');
+            } else {
+                input.type = "password";
+                toggleBtn.classList.remove('fa-eye-slash');
+                toggleBtn.classList.add('fa-eye');
+            }
+        });
+
+        btn.addEventListener('click', tentarLogin);
+        input.addEventListener('keyup', (e) => { if (e.key === 'Enter') tentarLogin(); });
+
+        document.addEventListener("DOMContentLoaded", init);
+
+    })();
+    </script>
+</body>
+</html>
