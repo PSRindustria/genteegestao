@@ -126,8 +126,7 @@
         
         .btn-save { background: #28a745; box-shadow: 0 4px 10px rgba(40,167,69,0.2); }
         .btn-save:hover { background: #218838; }
-        .btn-schedule { background: var(--psr-blue); box-shadow: 0 4px 10px rgba(0,51,102,0.2); }
-        .btn-schedule:hover { background: #002244; }
+        /* Botão Schedule removido daqui */
         .btn-clear { background: #dc3545; }
         .btn-clear:hover { background: #c82333; }
 
@@ -139,10 +138,7 @@
         .h-changes { font-size: 0.85rem; color: #555; margin-top: 3px; }
         .h-time { font-size: 0.8rem; color: #888; text-align: right; }
 
-        /* MODAL */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal-box { background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-
+        /* Modal style removido pois não é mais usado, mas mantendo a classe genérica caso precise no futuro não faz mal, porém removi o HTML do modal lá embaixo */
     </style>
 
     <script type="module">
@@ -325,20 +321,6 @@
                 listEl.innerHTML = html;
             } catch(e) {}
         }
-
-        window.modalProgramar = (action) => { document.getElementById('modalProgramar').style.display = action === 'open' ? 'flex' : 'none'; }
-        window.salvarProgramacao = async () => {
-            const date = document.getElementById('progDate').value;
-            if(!date) return alert("Escolha uma data.");
-            const dadosSalvos = {};
-            dias.forEach(dia => {
-                dadosSalvos[dia] = {};
-                categorias.forEach(cat => { dadosSalvos[dia][cat] = document.getElementById(`excel_${dia}_${cat}`).value; });
-            });
-            await set(ref(db, `historico_programacao/${date}`), dadosSalvos);
-            alert(`Backup salvo para ${date}`);
-            modalProgramar('close');
-        }
         
         window.syncInputs = (sourceId, targetId) => {
             const src = document.getElementById(sourceId);
@@ -499,24 +481,10 @@
 
         <div class="action-bar">
             <button class="btn-action btn-clear" onclick="limpar()"><i class="fas fa-trash"></i> Limpar</button>
-            <button class="btn-action btn-schedule" onclick="modalProgramar('open')"><i class="fas fa-calendar-alt"></i> Programar</button>
             <button class="btn-action btn-save" onclick="salvarTudo()"><i class="fas fa-sync-alt"></i> ATUALIZAR CARDÁPIO</button>
         </div>
 
     </div>
 
-    <div id="modalProgramar" class="modal-overlay">
-        <div class="modal-box">
-            <h3 style="color:var(--psr-blue)">Programar Cardápio</h3>
-            <p>Selecione a data para salvar este cardápio:</p>
-            <input type="date" id="progDate" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; margin:15px 0;">
-            <div style="display:flex; gap:10px; justify-content:center;">
-                <button onclick="modalProgramar('close')" style="padding:10px 20px; border:none; background:#eee; cursor:pointer; border-radius:5px;">Cancelar</button>
-                <button onclick="salvarProgramacao()" style="padding:10px 20px; border:none; background:var(--psr-blue); color:white; cursor:pointer; border-radius:5px;">Salvar</button>
-            </div>
-        </div>
-    </div>
-
 </body>
 </html>
-
