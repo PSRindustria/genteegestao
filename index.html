@@ -225,9 +225,8 @@
         </div>
     </div>
 
-    <script>
+<script>
     (function() {
-        // Senha: gentegestaopsr
         const TOKEN_SEGURO = "273707f61647375676567647e65676"; 
         
         const STORAGE_KEY = "psr_hex_access_v9";
@@ -264,9 +263,16 @@
 
         // Validação
         function tentarLogin() {
-            const senha = input.value.trim(); 
+            // CORREÇÃO: Força minúsculo (.toLowerCase) para evitar erro de Caps Lock
+            const senha = input.value.trim().toLowerCase(); 
+            const hashGerado = encriptar(senha);
             
-            if (encriptar(senha) === TOKEN_SEGURO) {
+            // DEBUG: Mostra no console do navegador (F12) o que está acontecendo
+            console.log("Senha digitada (limpa):", senha);
+            console.log("Token gerado:", hashGerado);
+            console.log("Token esperado:", TOKEN_SEGURO);
+
+            if (hashGerado === TOKEN_SEGURO) {
                 localStorage.setItem(STORAGE_KEY, new Date().getTime());
                 liberarAcesso(true);
             } else {
