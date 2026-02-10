@@ -447,10 +447,17 @@
                 // 2. Plano B: Não tem link? Buscar na pasta usando Nome ou CPF
 else {
                     const termoBusca = c.cpf || c.nome; 
-                    // Usa a URL de busca padrão do SharePoint (Nunca quebra)
-                    const linkBusca = `https://psrimpresssao.sharepoint.com/sites/GenteeGestao/_layouts/15/search.aspx?q=${encodeURIComponent(termoBusca)}`;
                     
-                    btnLink = `<a href="${linkBusca}" target="_blank" class="btn-icon" style="color:#0078d4" title="Pesquisar arquivo no SharePoint"><i class="fas fa-search"></i></a>`;
+                    // 1. Endereço da Biblioteca Principal (A porta de entrada)
+                    const baseUrl = "https://psrimpresssao.sharepoint.com/sites/GenteeGestao/Documentos%20Compartilhados/Forms/AllItems.aspx";
+                    
+                    // 2. O caminho exato da sua pasta (Onde queremos procurar)
+                    const folderPath = "/sites/GenteeGestao/Documentos Compartilhados/RH/Currículos Site";
+                    
+                    // 3. Monta o Link Mágico: Entra na biblioteca + Foca na pasta + Pesquisa o nome
+                    const linkBusca = `${baseUrl}?id=${encodeURIComponent(folderPath)}&viewid=0&q=${encodeURIComponent(termoBusca)}`;
+                    
+                    btnLink = `<a href="${linkBusca}" target="_blank" class="btn-icon" style="color:#0078d4" title="Procurar arquivo na pasta"><i class="fas fa-search"></i></a>`;
                 }
                 // --------------------------------------------------
 
@@ -713,4 +720,5 @@ else {
 
 </body>
 </html>
+
 
