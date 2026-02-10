@@ -293,7 +293,10 @@
             // Atualiza setas no HTML
             document.querySelectorAll('th').forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
-                th.querySelector('i').className = 'fas fa-sort'; // Ícone neutro
+                const icon = th.querySelector('i');
+                if (icon) { // CORREÇÃO AQUI: Verifica se o ícone existe antes de alterar
+                    icon.className = 'fas fa-sort'; 
+                }
             });
             
             const currentTh = document.querySelector(`th[onclick="sortBy('${key}')"]`);
@@ -718,4 +721,3 @@
 
 </body>
 </html>
-
