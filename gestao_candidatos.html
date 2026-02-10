@@ -445,12 +445,12 @@
                     btnLink = `<a href="${c.link_cv}" target="_blank" class="btn-icon" style="color:#d93025; font-size:1.2rem" title="Abrir Currículo Direto (PDF/DOC)"><i class="fas fa-file-pdf"></i></a>`;
                 } 
                 // 2. Plano B: Não tem link? Buscar na pasta usando Nome ou CPF
-                else {
+else {
                     const termoBusca = c.cpf || c.nome; 
-                    // Link de busca dentro da sua pasta específica "Currículos Site"
-                    const linkPasta = `https://psrimpresssao.sharepoint.com/sites/GenteeGestao/Documentos%20Compartilhados/RH/Curr%C3%ADculos%20Site/Forms/AllItems.aspx?viewid=0&q=${encodeURIComponent(termoBusca)}`;
+                    // Usa a URL de busca padrão do SharePoint (Nunca quebra)
+                    const linkBusca = `https://psrimpresssao.sharepoint.com/sites/GenteeGestao/_layouts/15/search.aspx?q=${encodeURIComponent(termoBusca)}`;
                     
-                    btnLink = `<a href="${linkPasta}" target="_blank" class="btn-icon" style="color:#0078d4" title="Procurar arquivo na pasta do SharePoint"><i class="fas fa-search"></i></a>`;
+                    btnLink = `<a href="${linkBusca}" target="_blank" class="btn-icon" style="color:#0078d4" title="Pesquisar arquivo no SharePoint"><i class="fas fa-search"></i></a>`;
                 }
                 // --------------------------------------------------
 
@@ -713,3 +713,4 @@
 
 </body>
 </html>
+
