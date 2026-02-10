@@ -148,11 +148,6 @@
             'milenessfranca@gmail.com'
         ];
 
-        // --- CONFIGURAÇÃO ONEDRIVE ---
-        // Se você tiver o link da pasta, coloque aqui. Se deixar vazio, ele abre a busca geral.
-        // Exemplo: "https://onedrive.live.com/?id=XXXX&cid=XXXX"
-        const ONEDRIVE_PASTA_URL = "https://onedrive.live.com/"; 
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
@@ -241,7 +236,6 @@
                 endereco: document.getElementById('c_endereco').value,
                 bairro: document.getElementById('c_bairro').value,
                 cidade: document.getElementById('c_cidade').value,
-                // Removemos o campo manual de link, pois agora é automático
                 data_cadastro: currentEditId ? (allCandidates.find(c => c.id === currentEditId).data_cadastro) : new Date().toISOString()
             };
 
@@ -282,7 +276,6 @@
 
         // --- ORDENAÇÃO (SORTING) ---
         window.sortBy = (key) => {
-            // Alterna direção se clicar na mesma coluna
             if (sortConfig.key === key) {
                 sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
             } else {
@@ -290,11 +283,10 @@
                 sortConfig.direction = 'asc';
             }
             
-            // Atualiza setas no HTML
             document.querySelectorAll('th').forEach(th => {
                 th.classList.remove('sort-asc', 'sort-desc');
                 const icon = th.querySelector('i');
-                if (icon) { // CORREÇÃO AQUI: Verifica se o ícone existe antes de alterar
+                if (icon) {
                     icon.className = 'fas fa-sort'; 
                 }
             });
@@ -305,16 +297,13 @@
                 currentTh.querySelector('i').className = sortConfig.direction === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
             }
 
-            // Executa a ordenação
             filteredCandidates.sort((a, b) => {
                 let valA = a[key] ? a[key].toString().toLowerCase() : '';
                 let valB = b[key] ? b[key].toString().toLowerCase() : '';
 
-                // Tratamento especial para idade (cálculo de data)
                 if (key === 'nascimento') {
                     valA = a.nascimento ? new Date(a.nascimento).getTime() : 0;
                     valB = b.nascimento ? new Date(b.nascimento).getTime() : 0;
-                    // Inverte lógica pois data maior = pessoa mais nova
                     return sortConfig.direction === 'asc' ? valB - valA : valA - valB;
                 }
 
@@ -386,13 +375,11 @@
                 let coordsRef = (fGeoRef && CITY_COORDS[fGeoRef]) ? CITY_COORDS[fGeoRef] : null;
 
                 filteredCandidates = allCandidates.filter(c => {
-                    // Match Texto
                     const matchNome = isFuzzyMatch(fNome, c.nome);
                     const matchArea = fArea === "" || c.area === fArea;
                     const matchCidade = isFuzzyMatch(fCidade, c.cidade);
                     const matchBairro = isFuzzyMatch(fBairro, c.bairro);
 
-                    // Match Idade
                     let idade = 0;
                     if(c.nascimento) {
                         const birth = new Date(c.nascimento);
@@ -400,7 +387,6 @@
                     }
                     const matchIdade = idade >= fIdadeMin && idade <= fIdadeMax;
 
-                    // Match Geo
                     let matchGeo = true;
                     if (fGeoRaio > 0 && fGeoRef) {
                         const candCityNorm = (c.cidade || "").toLowerCase().trim();
@@ -419,9 +405,8 @@
                     return matchNome && matchArea && matchCidade && matchBairro && matchGeo && matchIdade;
                 });
 
-                // Reaplica ordenação atual se houver
                 if (sortConfig.key) {
-                    window.sortBy(sortConfig.key); // Chama o sort novamente
+                    window.sortBy(sortConfig.key); 
                 } else {
                     renderTable(filteredCandidates);
                 }
@@ -452,15 +437,22 @@
                 if (['Administrativo','Financeiro','RH','Comercial'].includes(c.area)) badgeClass = 'badge-adm';
                 if (c.area === 'Financeiro') badgeClass = 'badge-fin';
 
-                // --- LÓGICA DO ONEDRIVE ---
-                // Cria o nome do arquivo baseado no email (ex: gabrielesantiago.rh)
-                let btnLink = `<span style="color:#eee; cursor:default"><i class="fas fa-link"></i></span>`;
-                if (c.email) {
-                    const nomeArquivo = c.email.split('@')[0]; // Pega tudo antes do @
-                    // Link de busca no OneDrive
-                    const linkOneDrive = `https://onedrive.live.com/?id=root&q=${nomeArquivo}`;
-                    btnLink = `<a href="${linkOneDrive}" target="_blank" class="btn-icon" style="color:#0078d4" title="Buscar '${nomeArquivo}' no OneDrive"><i class="fas fa-cloud"></i></a>`;
+                // --- NOVA LÓGICA DO SHAREPOINT (HÍBRIDA) ---
+                let btnLink = `<span style="color:#eee; cursor:default" title="Aguardando arquivo..."><i class="fas fa-clock"></i></span>`;
+                
+                // 1. Cenário Perfeito: Temos o link direto salvo no banco (Vindo do Make)
+                if (c.link_cv) {
+                    btnLink = `<a href="${c.link_cv}" target="_blank" class="btn-icon" style="color:#d93025; font-size:1.2rem" title="Abrir Currículo Direto (PDF/DOC)"><i class="fas fa-file-pdf"></i></a>`;
+                } 
+                // 2. Plano B: Não tem link? Buscar na pasta usando Nome ou CPF
+                else {
+                    const termoBusca = c.cpf || c.nome; 
+                    // Link de busca dentro da sua pasta específica "Currículos Site"
+                    const linkPasta = `https://psrimpresssao.sharepoint.com/sites/GenteeGestao/Documentos%20Compartilhados/RH/Curr%C3%ADculos%20Site/Forms/AllItems.aspx?viewid=0&q=${encodeURIComponent(termoBusca)}`;
+                    
+                    btnLink = `<a href="${linkPasta}" target="_blank" class="btn-icon" style="color:#0078d4" title="Procurar arquivo na pasta do SharePoint"><i class="fas fa-search"></i></a>`;
                 }
+                // --------------------------------------------------
 
                 const wpp = c.whatsapp ? c.whatsapp.replace(/\D/g, '') : '';
                 const btnWpp = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" class="btn-icon" style="color:#25d366"><i class="fab fa-whatsapp"></i></a>` : `<span class="btn-icon" style="color:#eee"><i class="fab fa-whatsapp"></i></span>`;
