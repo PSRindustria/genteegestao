@@ -76,7 +76,7 @@
         th { 
             background: #f8f9fa; 
             text-align: left; 
-            padding: 15px; 
+            padding: 10px; 
             font-size: 0.8rem; 
             text-transform: uppercase; 
             color: #666; 
@@ -92,7 +92,7 @@
         th i { margin-left: 5px; opacity: 0.3; }
         th.sort-asc i, th.sort-desc i { opacity: 1; color: var(--psr-blue); }
 
-        td { padding: 15px; border-bottom: 1px solid #eee; font-size: 0.9rem; vertical-align: middle; }
+        td { padding: 10px; border-bottom: 0.5px solid #eee; font-size: 0.9rem; vertical-align: middle; }
         tr:hover { background: #f0f7ff; }
 
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
@@ -102,7 +102,7 @@
         .badge-fin { background: #fce4ec; color: #880e4f; }
         .dist-badge { background: #f3e5f5; color: #7b1fa2; font-size: 0.7rem; margin-left: 5px; padding: 2px 5px; border-radius: 3px; }
 
-        .actions-cell { display: flex; gap: 10px; align-items: center; } /* Correção do alinhamento */
+        .actions-cell { padding-block: 23px; display: flex; gap: 10px; align-items: center; align-content: center; flex-wrap: nowrap; justify-content: center; }
         .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #999; transition: 0.2s; }
         .btn-icon:hover { color: var(--psr-blue); transform: scale(1.1); }
         .btn-icon.delete:hover { color: var(--danger); }
@@ -855,3 +855,4 @@
 
 </body>
 </html>
+
