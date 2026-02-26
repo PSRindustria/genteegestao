@@ -65,8 +65,8 @@
         .stats { font-size: 0.9rem; color: #666; }
         .stats strong { color: var(--psr-blue); font-size: 1.1rem; }
 
-        .btn-add { background: var(--success); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .btn-add:hover { background: #218838; }
+        .btn-add { background: var(--success); color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-add:hover { background: #218838; opacity: 0.9; }
 
         /* --- TABLE & SORTING --- */
         .table-container { background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); overflow-x: auto; min-height: 400px; }
@@ -102,7 +102,7 @@
         .badge-fin { background: #fce4ec; color: #880e4f; }
         .dist-badge { background: #f3e5f5; color: #7b1fa2; font-size: 0.7rem; margin-left: 5px; padding: 2px 5px; border-radius: 3px; }
 
-        .actions-cell { display: flex; gap: 10px; }
+        .actions-cell { display: flex; gap: 10px; align-items: center; } /* Correção do alinhamento */
         .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #999; transition: 0.2s; }
         .btn-icon:hover { color: var(--psr-blue); transform: scale(1.1); }
         .btn-icon.delete:hover { color: var(--danger); }
@@ -127,7 +127,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, set, get, child, update, push, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         // Configuração
@@ -153,6 +153,9 @@
         const db = getDatabase(app);
         const provider = new GoogleAuthProvider();
 
+        // Força a persistência do login do Firebase no Local Storage do navegador
+        setPersistence(auth, browserLocalPersistence);
+
         let allCandidates = [];
         let filteredCandidates = [];
         let currentEditId = null;
@@ -177,6 +180,32 @@
             "itaguaí": {lat: -22.8696, lon: -43.7758}
         };
 
+        // --- FUNÇÕES DE DATA E IDADE (NOVA IMPLEMENTAÇÃO) ---
+        function parseToDate(dataStr) {
+            if (!dataStr) return null;
+            if (typeof dataStr === 'string' && dataStr.includes('/')) {
+                const partes = dataStr.split('/');
+                if (partes.length === 3) {
+                    return new Date(partes[2], partes[1] - 1, partes[0]);
+                }
+            }
+            const d = new Date(dataStr);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function calcularIdade(dataStr) {
+            const dateObj = parseToDate(dataStr);
+            if (!dateObj) return 'N/D';
+
+            const hoje = new Date();
+            let idade = hoje.getFullYear() - dateObj.getFullYear();
+            const m = hoje.getMonth() - dateObj.getMonth();
+            if (m < 0 || (m === 0 && hoje.getDate() < dateObj.getDate())) {
+                idade--;
+            }
+            return idade;
+        }
+
         // --- AUTH ---
         onAuthStateChanged(auth, (user) => {
             document.getElementById('loading-screen').style.display = 'none';
@@ -184,7 +213,7 @@
                 document.getElementById('user-email').innerText = user.email;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('app-screen').style.display = 'block';
-                carregarCandidatos();
+                window.carregarCandidatos();
             } else if (user) {
                 document.getElementById('denied-email').innerText = user.email;
                 document.getElementById('access-denied').style.display = 'flex';
@@ -198,7 +227,7 @@
         window.logout = () => signOut(auth).then(() => location.reload());
 
         // --- CRUD ---
-        async function carregarCandidatos() {
+        window.carregarCandidatos = async () => {
             const tableBody = document.getElementById('table-body');
             tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Carregando banco de talentos...</td></tr>';
             
@@ -214,12 +243,12 @@
                     });
                 }
                 filteredCandidates = [...allCandidates]; // Inicializa filtrados
-                aplicarFiltros();
+                window.aplicarFiltros();
             } catch (error) {
                 console.error(error);
                 alert("Erro ao carregar: " + error.message);
             }
-        }
+        };
 
         window.salvarCandidato = async () => {
             const data = {
@@ -252,15 +281,15 @@
                     await push(ref(db, 'candidatos'), data);
                     alert("Cadastrado com sucesso!");
                 }
-                closeModal();
-                carregarCandidatos();
+                window.closeModal();
+                window.carregarCandidatos();
             } catch (e) { alert("Erro: " + e.message); }
         };
 
         window.deletarCandidato = async (id) => {
             if (confirm("Deseja realmente excluir?")) {
                 await remove(ref(db, `candidatos/${id}`));
-                carregarCandidatos();
+                window.carregarCandidatos();
             }
         };
 
@@ -268,7 +297,7 @@
             const c = allCandidates.find(x => x.id === id);
             if (!c) return;
             currentEditId = id;
-            document.getElementById('modalTitle').innerText = "Editar Candidato";
+            document.getElementById('modalTitle').innerHTML = "Editar Candidato";
             
             // Campos que serão preenchidos
             const fields = [
@@ -280,9 +309,69 @@
             fields.forEach(f => {
                 let key = f;
                 if (f === 'civil') key = 'estado_civil'; // Ajuste de nome da chave
-                document.getElementById(`c_${f}`).value = c[key] || '';
+                
+                // Formata a data DD/MM/YYYY para input date (YYYY-MM-DD) se precisar
+                let val = c[key] || '';
+                if (f === 'nascimento' && val.includes('/')) {
+                     const p = val.split('/');
+                     if (p.length === 3) val = `${p[2]}-${p[1]}-${p[0]}`;
+                }
+                
+                document.getElementById(`c_${f}`).value = val;
             });
-            openModal();
+            window.openModal();
+        };
+
+        window.visualizarCandidato = (id) => {
+            const c = allCandidates.find(x => x.id === id);
+            if (!c) return;
+            
+            const formatInfo = (label, value) => `
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #eee;">
+                    <strong style="font-size: 0.75rem; color: #888; text-transform: uppercase;">${label}</strong><br>
+                    <span style="color: #333; font-size: 0.95rem;">${value || '-'}</span>
+                </div>
+            `;
+            
+            let badgeClass = 'badge-area';
+            if (c.area === 'Produção') badgeClass = 'badge-prod';
+            if (['Administrativo','Financeiro','RH','Comercial'].includes(c.area)) badgeClass = 'badge-adm';
+            if (c.area === 'Financeiro') badgeClass = 'badge-fin';
+
+            let idadeCalc = calcularIdade(c.nascimento);
+            idadeCalc = idadeCalc === 'N/D' ? 'N/D' : idadeCalc + ' anos';
+
+            const dCad = c.data_cadastro ? new Date(c.data_cadastro).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+
+            document.getElementById('conteudoVisualizar').innerHTML = `
+                <div class="full-width" style="display:flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 10px;">
+                    <h2 style="margin: 0; color: var(--psr-blue); font-size: 1.4rem;">${c.nome}</h2>
+                    <span class="badge ${badgeClass}" style="font-size: 0.9rem; padding: 6px 12px;">${c.area || '-'}</span>
+                </div>
+                
+                ${formatInfo('E-mail', c.email)}
+                ${formatInfo('CPF', c.cpf)}
+                ${formatInfo('Nascimento', c.nascimento)}
+                ${formatInfo('Idade', idadeCalc)}
+                ${formatInfo('Telefone', c.telefone)}
+                ${formatInfo('WhatsApp', c.whatsapp)}
+                ${formatInfo('Sexo', c.sexo)}
+                ${formatInfo('Estado Civil', c.estado_civil)}
+                
+                <div class="full-width" style="margin-top: 10px;"><h4 style="margin: 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Endereço</h4></div>
+                
+                ${formatInfo('CEP', c.cep)}
+                ${formatInfo('Endereço', c.endereco + (c.numero ? ', nº ' + c.numero : ''))}
+                ${formatInfo('Complemento', c.complemento)}
+                ${formatInfo('Bairro', c.bairro)}
+                ${formatInfo('Cidade', c.cidade)}
+                ${formatInfo('Estado (UF)', c.estado)}
+                
+                <div class="full-width" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: #e3f2fd; padding: 10px 15px; border-radius: 8px;">
+                    <span style="font-size: 0.85rem; color: #0d47a1;"><strong>Registrado em:</strong> ${dCad}</span>
+                </div>
+            `;
+            document.getElementById('modalVisualizar').style.display = 'flex';
         };
 
         // --- ORDENAÇÃO (SORTING) ---
@@ -309,14 +398,17 @@
             }
 
             filteredCandidates.sort((a, b) => {
+                if (key === 'nascimento') {
+                    // Ordena pela data exata
+                    const dateA = parseToDate(a.nascimento);
+                    const dateB = parseToDate(b.nascimento);
+                    const timeA = dateA ? dateA.getTime() : 0;
+                    const timeB = dateB ? dateB.getTime() : 0;
+                    return sortConfig.direction === 'asc' ? timeB - timeA : timeA - timeB;
+                }
+
                 let valA = a[key] ? a[key].toString().toLowerCase() : '';
                 let valB = b[key] ? b[key].toString().toLowerCase() : '';
-
-                if (key === 'nascimento') {
-                    valA = a.nascimento ? new Date(a.nascimento).getTime() : 0;
-                    valB = b.nascimento ? new Date(b.nascimento).getTime() : 0;
-                    return sortConfig.direction === 'asc' ? valB - valA : valA - valB;
-                }
 
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -344,13 +436,10 @@
             return matrix[b.length][a.length];
         }
 
-        // --- CORREÇÃO AQUI: isFuzzyMatch agora trata valores nulos/numéricos ---
         function isFuzzyMatch(textoInput, textoBanco) {
             if (!textoInput) return true;
             
-            // Converte textoBanco para string para evitar erro .toLowerCase() em null/undefined/number
             const safeBanco = String(textoBanco || "");
-            
             if (safeBanco.trim() === "") return false;
             
             const a = textoInput.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -396,12 +485,10 @@
                     const matchCidade = isFuzzyMatch(fCidade, c.cidade);
                     const matchBairro = isFuzzyMatch(fBairro, c.bairro);
 
-                    let idade = 0;
-                    if(c.nascimento) {
-                        const birth = new Date(c.nascimento);
-                        if(!isNaN(birth)) idade = new Date().getFullYear() - birth.getFullYear();
-                    }
-                    const matchIdade = idade >= fIdadeMin && idade <= fIdadeMax;
+                    // Corrige o filtro de idade
+                    let idadeNum = calcularIdade(c.nascimento);
+                    if (idadeNum === 'N/D') idadeNum = 0;
+                    const matchIdade = idadeNum >= fIdadeMin && idadeNum <= fIdadeMax;
 
                     let matchGeo = true;
                     if (fGeoRaio > 0 && fGeoRef) {
@@ -442,40 +529,28 @@
             }
 
             list.forEach(c => {
-                let idade = 'N/D';
-                if(c.nascimento) {
-                    const birth = new Date(c.nascimento);
-                    if(!isNaN(birth)) idade = (new Date().getFullYear() - birth.getFullYear()) + ' anos';
-                }
+                // Cálculo de idade arrumado exibido na tabela
+                let idadeCalculada = calcularIdade(c.nascimento);
+                let idadeExibir = idadeCalculada === 'N/D' ? 'N/D' : idadeCalculada + ' anos';
                 
                 let badgeClass = 'badge-area';
                 if (c.area === 'Produção') badgeClass = 'badge-prod';
                 if (['Administrativo','Financeiro','RH','Comercial'].includes(c.area)) badgeClass = 'badge-adm';
                 if (c.area === 'Financeiro') badgeClass = 'badge-fin';
 
-                // --- NOVA LÓGICA DO SHAREPOINT (HÍBRIDA) ---
+                // --- SHAREPOINT ---
                 let btnLink = `<span style="color:#eee; cursor:default" title="Aguardando arquivo..."><i class="fas fa-clock"></i></span>`;
                 
-                // 1. Cenário Perfeito: Temos o link direto salvo no banco (Vindo do Make)
                 if (c.link_cv) {
                     btnLink = `<a href="${c.link_cv}" target="_blank" class="btn-icon" style="color:#d93025; font-size:1.2rem" title="Abrir Currículo Direto (PDF/DOC)"><i class="fas fa-file-pdf"></i></a>`;
-                } 
-                // 2. Plano B: Não tem link? Buscar na pasta usando Nome ou CPF
-                else {
+                } else {
                     const termoBusca = c.cpf || c.nome; 
-                    
-                    // 1. Endereço da Biblioteca Principal (A porta de entrada)
                     const baseUrl = "https://psrimpresssao.sharepoint.com/sites/GenteeGestao/Documentos%20Compartilhados/Forms/AllItems.aspx";
-                    
-                    // 2. O caminho exato da sua pasta (Onde queremos procurar)
                     const folderPath = "/sites/GenteeGestao/Documentos Compartilhados/RH/Currículos Site";
-                    
-                    // 3. Monta o Link Mágico: Entra na biblioteca + Foca na pasta + Pesquisa o nome
                     const linkBusca = `${baseUrl}?id=${encodeURIComponent(folderPath)}&viewid=0&q=${encodeURIComponent(termoBusca)}`;
                     
                     btnLink = `<a href="${linkBusca}" target="_blank" class="btn-icon" style="color:#0078d4" title="Procurar arquivo na pasta"><i class="fas fa-search"></i></a>`;
                 }
-                // --------------------------------------------------
 
                 const wpp = c.whatsapp ? c.whatsapp.replace(/\D/g, '') : '';
                 const btnWpp = wpp ? `<a href="https://wa.me/55${wpp}" target="_blank" class="btn-icon" style="color:#25d366"><i class="fab fa-whatsapp"></i></a>` : `<span class="btn-icon" style="color:#eee"><i class="fab fa-whatsapp"></i></span>`;
@@ -492,12 +567,13 @@
                         <div style="font-size:0.75rem; color:#888">${c.email || ''}</div>
                     </td>
                     <td><span class="badge ${badgeClass}">${c.area}</span></td>
-                    <td>${idade}</td>
+                    <td>${idadeExibir}</td>
                     <td>${localHtml}</td>
                     <td>${c.telefone || '-'}</td>
                     <td class="actions-cell">
                         ${btnWpp}
                         ${btnLink}
+                        <button onclick="visualizarCandidato('${c.id}')" class="btn-icon" title="Visualizar Detalhes"><i class="fas fa-eye"></i></button>
                         <button onclick="editarCandidato('${c.id}')" class="btn-icon" title="Editar"><i class="fas fa-edit"></i></button>
                         <button onclick="deletarCandidato('${c.id}')" class="btn-icon delete" title="Excluir"><i class="fas fa-trash"></i></button>
                     </td>
@@ -508,15 +584,21 @@
 
         // --- UI ---
         window.openModal = () => document.getElementById('modalCandidato').style.display = 'flex';
+        
         window.closeModal = () => {
             document.getElementById('modalCandidato').style.display = 'none';
             currentEditId = null;
             document.getElementById('formCandidato').reset();
             document.getElementById('modalTitle').innerText = "Novo Candidato";
         }
+        
+        window.closeModalVisualizar = () => {
+            document.getElementById('modalVisualizar').style.display = 'none';
+        }
+
         window.limparFiltros = () => {
             document.querySelectorAll('.filter-input').forEach(el => el.value = '');
-            aplicarFiltros();
+            window.aplicarFiltros();
         }
 
     </script>
@@ -620,7 +702,16 @@
                     <div class="stats">
                         Candidatos Visíveis: <strong id="total-count">0</strong>
                     </div>
-                    <button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Novo Candidato</button>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-add" style="background-color: var(--psr-blue);" onclick="carregarCandidatos()">
+                            <i class="fas fa-sync-alt"></i> Atualizar
+                        </button>
+                        <button class="btn-add" onclick="openModal()">
+                            <i class="fas fa-plus"></i> Novo Candidato
+                        </button>
+                    </div>
+
                 </div>
 
                 <div class="table-container">
@@ -743,6 +834,22 @@
                     <button type="submit" style="padding:10px 20px; border:none; background:var(--psr-blue); color:white; cursor:pointer; border-radius:6px">Salvar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="modalVisualizar" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 style="color:var(--psr-blue); margin:0"><i class="fas fa-id-card"></i> Detalhes do Candidato</h3>
+                <button onclick="closeModalVisualizar()" style="border:none; background:none; cursor:pointer; font-size:1.2rem">&times;</button>
+            </div>
+            
+            <div id="conteudoVisualizar" class="modal-grid">
+                </div>
+
+            <div style="margin-top:20px; display:flex; justify-content:flex-end">
+                <button type="button" onclick="closeModalVisualizar()" style="padding:10px 20px; border:none; background:var(--psr-blue); color:white; cursor:pointer; border-radius:6px">Fechar</button>
+            </div>
         </div>
     </div>
 
